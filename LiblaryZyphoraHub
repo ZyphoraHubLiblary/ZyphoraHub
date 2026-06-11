@@ -491,9 +491,9 @@ function ZyphoraLibrary.new(_, title)
     -- Icon
     local ToggleIcon = New("ImageLabel", {
         Name = "ToggleIcon",
-        Size = UDim2.new(0,20,0,20),
+        Size = UDim2.new(0,25,0,25),
         BackgroundTransparency = 1,
-        Image = ResolveIcon(114602913295044) or "",
+        Image = ResolveIcon(82539886579242) or "",
         ImageColor3 = T.AccentBright,
         ZIndex = 13,
         Parent = ScreenGui,
