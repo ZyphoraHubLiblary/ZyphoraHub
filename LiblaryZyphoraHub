@@ -493,7 +493,7 @@ function ZyphoraLibrary.new(_, title)
         Name = "ToggleIcon",
         Size = UDim2.new(0,20,0,20),
         BackgroundTransparency = 1,
-        Image = ResolveIcon(103939647294512) or "",
+        Image = ResolveIcon(114602913295044) or "",
         ImageColor3 = T.AccentBright,
         ZIndex = 13,
         Parent = ScreenGui,
