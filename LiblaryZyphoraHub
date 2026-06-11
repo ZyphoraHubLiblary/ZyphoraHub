@@ -37,7 +37,7 @@ local RunService       = game:GetService("RunService")
 -- ─────────────────────────────────────────
 --  ICON SUPPORT
 -- ─────────────────────────────────────────
-local ICON_SUPPORT_URL = ""
+local ICON_SUPPORT_URL = "https://raw.githubusercontent.com/ZyphoraHubLiblary/ZyphoraHubIconSupport/refs/heads/main/Icon%20Support"
 local IconSupport = {}
 pcall(function() IconSupport = loadstring(game:HttpGet(ICON_SUPPORT_URL))() end)
 
@@ -52,6 +52,22 @@ local function ResolveIcon(icon)
         if fixed then return fixed end
     end
     return nil
+end
+
+local function ResolveBackground(link)
+    if not link or link == "" then
+        return ""
+    end
+
+    if tostring(link):match("^rbxassetid://") then
+        return link
+    end
+
+    if tostring(link):match("^https://") or tostring(link):match("^http://") then
+        return link
+    end
+
+    return "rbxassetid://" .. tostring(link)
 end
 
 -- ─────────────────────────────────────────
@@ -139,10 +155,10 @@ local DEFAULT_THEME = {
     BorderLight = Color3.fromRGB(55,  52,  85),
 
     -- Accent
-    Accent      = Color3.fromRGB(108,  59, 255),
-    AccentBright= Color3.fromRGB(155, 110, 255),
-    AccentDim   = Color3.fromRGB(75,   42, 180),
-    AccentGlow  = Color3.fromRGB(108,  59, 255),
+Accent      = Color3.fromRGB(255, 60, 60),
+AccentBright= Color3.fromRGB(80, 160, 255),
+AccentDim   = Color3.fromRGB(180, 40, 40),
+AccentGlow  = Color3.fromRGB(0, 120, 255),
 
     -- Text
     Text        = Color3.fromRGB(240, 238, 252),
@@ -365,6 +381,27 @@ function ZyphoraLibrary.new(_, title)
     Corner(MainFrame, 12)
     local MainStroke = Stroke(MainFrame, T.Border, 1.2, 0)
     self.MainFrame = MainFrame
+    local CustomBackground = New("ImageLabel", {
+    Name = "CustomBackground",
+    Size = UDim2.new(1,0,1,0),
+    BackgroundTransparency = 1,
+    Image = ResolveBackground("https://i.imgur.com/YOURIMAGE.png"),
+    ScaleType = Enum.ScaleType.Crop,
+    ImageTransparency = 0.35,
+    ZIndex = -1,
+    Parent = MainFrame,
+})
+
+Corner(CustomBackground, 12)
+
+local BgGradient = New("UIGradient", {
+    Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,40,40)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(40,120,255))
+    },
+    Rotation = 45,
+    Parent = CustomBackground
+})
     self._uiRefs.MainFrame = MainFrame
     self._uiRefs.MainStroke = MainStroke
 
@@ -593,7 +630,10 @@ function ZyphoraLibrary.new(_, title)
         Parent = TopBar,
     })
     Corner(TopGrad, 12)
-    Gradient(TopGrad, { Color3.fromRGB(25,20,45), T.BGSecondary }, 90)
+    Gradient(TopGrad, {
+    Color3.fromRGB(255,40,40),
+    Color3.fromRGB(40,80,255)
+}, 90)
 
     self.TopBar = TopBar
     self._uiRefs.TopBar = TopBar
@@ -825,10 +865,10 @@ function ZyphoraLibrary.new(_, title)
         Stroke(Hero, T.Border, 1)
 
         Gradient(Hero, {
-            Color3.fromRGB(60,30,130),
-            Color3.fromRGB(20,16,48),
-            Color3.fromRGB(10,8,20),
-        }, 115)
+    Color3.fromRGB(255,50,50),
+    Color3.fromRGB(80,120,255),
+    Color3.fromRGB(10,8,20),
+}, 115)
 
         -- Accent line
         local HeroAccent = New("Frame", {
