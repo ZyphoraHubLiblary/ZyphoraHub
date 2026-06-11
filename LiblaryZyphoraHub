@@ -1,0 +1,2432 @@
+-- ╔══════════════════════════════════════════╗
+-- ║   ██████╗ ███████╗██╗  ██╗███████╗      ║
+-- ║   ██╔══██╗██╔════╝╚██╗██╔╝╚══███╔╝      ║
+-- ║   ██████╔╝█████╗   ╚███╔╝   ███╔╝       ║
+-- ║   ██╔══██╗██╔══╝   ██╔██╗  ███╔╝        ║
+-- ║   ██║  ██║███████╗██╔╝ ██╗███████╗      ║
+-- ║   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝      ║
+-- ╠══════════════════════════════════════════╣
+-- ║  LIBRARY  : Zyphora UI                   ║
+-- ║  VERSION  : V3.0                         ║
+-- ║  STATUS   : Private                      ║
+-- ║  OWNER    : Zyphora                      ║
+-- ╚══════════════════════════════════════════╝
+
+--[[
+    ================================================================
+    COPYRIGHT © 2026 Zyphora_. ALL RIGHTS RESERVED.
+    ================================================================
+    Unauthorized copying, distribution, or modification is strictly
+    prohibited. All intellectual property rights reserved.
+    ================================================================
+]]
+
+local ZyphoraLibrary = {}
+ZyphoraLibrary.__index = ZyphoraLibrary
+
+local TabClass = {}
+TabClass.__index = TabClass
+
+local TweenService     = game:GetService("TweenService")
+local HttpService      = game:GetService("HttpService")
+local CoreGui          = game:GetService("CoreGui")
+local Players          = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService       = game:GetService("RunService")
+
+-- ─────────────────────────────────────────
+--  ICON SUPPORT
+-- ─────────────────────────────────────────
+local ICON_SUPPORT_URL = ""
+local IconSupport = {}
+pcall(function() IconSupport = loadstring(game:HttpGet(ICON_SUPPORT_URL))() end)
+
+local function ResolveIcon(icon)
+    if not icon then return nil end
+    if typeof(icon) == "number" then return "rbxassetid://" .. tostring(icon) end
+    if typeof(icon) == "string" then
+        if icon:match("^rbxassetid://") or icon:match("^http") then return icon end
+        local fixed = IconSupport[icon]
+            or IconSupport[icon:sub(1,1):upper() .. icon:sub(2)]
+            or IconSupport[string.upper(icon)]
+        if fixed then return fixed end
+    end
+    return nil
+end
+
+-- ─────────────────────────────────────────
+--  UTILITIES
+-- ─────────────────────────────────────────
+local function Clamp255(n) return math.clamp(math.floor(tonumber(n) or 0), 0, 255) end
+local function ColorToHex(c) return string.format("#%02X%02X%02X", Clamp255(c.R*255), Clamp255(c.G*255), Clamp255(c.B*255)) end
+local function HexToColor(hex, fallback)
+    if typeof(hex) ~= "string" then return fallback end
+    hex = hex:gsub("#",""):gsub("0x","")
+    if #hex ~= 6 then return fallback end
+    local r,g,b = tonumber(hex:sub(1,2),16), tonumber(hex:sub(3,4),16), tonumber(hex:sub(5,6),16)
+    if not r or not g or not b then return fallback end
+    return Color3.fromRGB(r,g,b)
+end
+local function SanitizeName(name)
+    name = tostring(name or ""):gsub("[%/%:*%?\"<>|]",""):gsub("%s+",""):gsub("[%+%^%$]","")
+    return name == "" and "Profile" or name
+end
+local function FileExists(path) if isfile then local ok,r = pcall(isfile,path); return ok and r end return false end
+local function EnsureFolder(path) if makefolder and not isfolder(path) then pcall(makefolder,path) end end
+
+-- ─────────────────────────────────────────
+--  UI HELPERS
+-- ─────────────────────────────────────────
+local function New(class, props)
+    local inst = Instance.new(class)
+    for k,v in pairs(props) do
+        if k ~= "Parent" and k ~= "Children" then
+            pcall(function() inst[k] = v end)
+        end
+    end
+    if props.Children then
+        for _,child in ipairs(props.Children) do child.Parent = inst end
+    end
+    if props.Parent then inst.Parent = props.Parent end
+    return inst
+end
+
+local function Corner(parent, radius)
+    return New("UICorner", { CornerRadius = UDim.new(0, radius or 8), Parent = parent })
+end
+local function Stroke(parent, color, thickness, transparency)
+    return New("UIStroke", { Color = color, Thickness = thickness or 1, Transparency = transparency or 0, Parent = parent })
+end
+local function Gradient(parent, colors, rotation)
+    local seq = {}
+    for i,c in ipairs(colors) do
+        table.insert(seq, ColorSequenceKeypoint.new((i-1)/(#colors-1), c))
+    end
+    return New("UIGradient", { Color = ColorSequence.new(seq), Rotation = rotation or 0, Parent = parent })
+end
+local function Pad(parent, padding)
+    return New("UIPadding", {
+        PaddingLeft = UDim.new(0, padding), PaddingRight = UDim.new(0, padding),
+        PaddingTop = UDim.new(0, padding), PaddingBottom = UDim.new(0, padding),
+        Parent = parent
+    })
+end
+
+local TI = TweenInfo.new
+local function Tween(inst, info, props)
+    local t = TweenService:Create(inst, info, props)
+    t:Play()
+    return t
+end
+local function TFast(inst, props) return Tween(inst, TI(0.15, Enum.EasingStyle.Quad), props) end
+local function TSlow(inst, props) return Tween(inst, TI(0.3, Enum.EasingStyle.Quad), props) end
+local function TSpring(inst, props) return Tween(inst, TI(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), props) end
+
+-- ─────────────────────────────────────────
+--  THEME DEFAULTS
+-- ─────────────────────────────────────────
+local DEFAULT_THEME = {
+    -- Backgrounds
+    BG          = Color3.fromRGB(8,   8,  14),
+    BGSecondary = Color3.fromRGB(12,  12,  20),
+    BGTertiary  = Color3.fromRGB(16,  16,  26),
+    Surface     = Color3.fromRGB(20,  20,  32),
+    SurfaceHigh = Color3.fromRGB(26,  24,  40),
+    SurfaceTop  = Color3.fromRGB(30,  28,  46),
+
+    -- Borders
+    Border      = Color3.fromRGB(38,  36,  60),
+    BorderLight = Color3.fromRGB(55,  52,  85),
+
+    -- Accent
+    Accent      = Color3.fromRGB(108,  59, 255),
+    AccentBright= Color3.fromRGB(155, 110, 255),
+    AccentDim   = Color3.fromRGB(75,   42, 180),
+    AccentGlow  = Color3.fromRGB(108,  59, 255),
+
+    -- Text
+    Text        = Color3.fromRGB(240, 238, 252),
+    TextDim     = Color3.fromRGB(165, 160, 190),
+    TextMuted   = Color3.fromRGB(95,  90, 120),
+
+    -- Status
+    Success     = Color3.fromRGB(72, 200, 130),
+    Error       = Color3.fromRGB(240, 75,  90),
+    Warning     = Color3.fromRGB(255, 175,  55),
+
+    -- Toggle
+    ToggleOn    = Color3.fromRGB(108,  59, 255),
+    ToggleOff   = Color3.fromRGB(22,  20, 35),
+}
+
+-- ─────────────────────────────────────────
+--  APPLY THEME
+-- ─────────────────────────────────────────
+function ZyphoraLibrary:ApplyTheme(theme)
+    theme = theme or self.Theme
+    self.Theme = theme
+
+    local T = theme
+
+    if self._uiRefs then
+        local R = self._uiRefs
+        if R.MainFrame then
+            R.MainFrame.BackgroundColor3 = T.BG
+            if R.MainStroke then R.MainStroke.Color = T.Border end
+        end
+        if R.TopBar then
+            R.TopBar.BackgroundColor3 = T.BGSecondary
+        end
+        if R.SidebarBg then
+            R.SidebarBg.BackgroundColor3 = T.BGTertiary
+        end
+        if R.SidebarDiv then
+            R.SidebarDiv.BackgroundColor3 = T.Border
+        end
+        if R.SearchBar then
+            R.SearchBar.BackgroundColor3 = T.Surface
+            if R.SearchBarStroke then R.SearchBarStroke.Color = T.Border end
+            if R.SearchIcon then R.SearchIcon.ImageColor3 = T.TextMuted end
+            if R.SearchBox then
+                R.SearchBox.TextColor3 = T.Text
+                R.SearchBox.PlaceholderColor3 = T.TextMuted
+            end
+        end
+    end
+
+    for _, tab in ipairs(self.Tabs or {}) do
+        local isActive = tab == self.CurrentTab
+        if tab.Button then
+            tab.Button.BackgroundColor3 = isActive and T.SurfaceHigh or T.Surface
+        end
+        if tab.Label then
+            tab.Label.TextColor3 = isActive and T.AccentBright or T.TextDim
+        end
+        if tab.Icon then
+            tab.Icon.ImageColor3 = isActive and T.AccentBright or T.TextMuted
+        end
+        if tab.ActiveLine then
+            tab.ActiveLine.BackgroundColor3 = isActive and T.Accent or Color3.fromRGB(0,0,0)
+            tab.ActiveLine.BackgroundTransparency = isActive and 0 or 1
+        end
+    end
+
+    for _, ref in ipairs(self.ControlRegistry or {}) do
+        if not (ref.Root and ref.Root.Parent) then continue end
+        ref.Root.BackgroundColor3 = T.Surface
+        if ref.RootStroke then ref.RootStroke.Color = T.Border end
+        if ref.Title then ref.Title.TextColor3 = T.Text end
+        if ref.Icon then ref.Icon.ImageColor3 = T.TextMuted end
+        if ref.Kind == "Button" then
+            if ref.BtnText then ref.BtnText.TextColor3 = T.Text end
+        elseif ref.Kind == "Toggle" then
+            if ref.TText then ref.TText.TextColor3 = T.Text end
+        elseif ref.Kind == "Dropdown" then
+            ref.Root.BackgroundColor3 = T.Surface
+            if ref.ValLabel then ref.ValLabel.TextColor3 = T.TextDim end
+        elseif ref.Kind == "Input" then
+            ref.Root.BackgroundColor3 = T.Surface
+            if ref.Box then
+                ref.Box.TextColor3 = T.Text
+                ref.Box.PlaceholderColor3 = T.TextMuted
+            end
+        elseif ref.Kind == "Label" then
+            ref.Root.BackgroundColor3 = T.BGSecondary
+            if ref.Sub then ref.Sub.TextColor3 = T.TextMuted end
+        elseif ref.Kind == "Slider" then
+            if ref.Track then ref.Track.BackgroundColor3 = T.SurfaceHigh end
+        elseif ref.Kind == "Section" then
+            if ref.Line then ref.Line.BackgroundColor3 = T.Border end
+            if ref.Txt then ref.Txt.TextColor3 = T.TextMuted end
+        end
+    end
+end
+
+-- ─────────────────────────────────────────
+--  PROFILE SYSTEM
+-- ─────────────────────────────────────────
+function ZyphoraLibrary:RefreshSaveProfiles()
+    if not self.SaveDropdown then return end
+    local list = {}
+    if listfiles and isfolder and isfolder(self.SaveFolder) then
+        for _, file in ipairs(listfiles(self.SaveFolder)) do
+            if file:sub(-5) == ".json" then
+                local name = file:match("([^/%\\]+)%.json$")
+                if name then table.insert(list, name) end
+            end
+        end
+    end
+    table.sort(list, function(a,b) return a:lower() < b:lower() end)
+    if #list == 0 then list = { "Tidak ada profile" } end
+    if self.SaveDropdown.SetOptions then
+        self.SaveDropdown:SetOptions(list, list[1], false)
+    end
+end
+
+function ZyphoraLibrary:SaveProfile(profileName)
+    if not writefile then self:Notify("Gagal", "Executor tidak support writefile.", "error"); return false end
+    EnsureFolder(self.SaveFolder)
+    local safe = SanitizeName(profileName)
+    local data = {
+        Theme = {},
+        Toggles = self.ToggleStates or {}
+    }
+    for k,v in pairs(self.Theme) do
+        if typeof(v) == "Color3" then data.Theme[k] = ColorToHex(v) end
+    end
+    pcall(writefile, self.SaveFolder .. "/" .. safe .. ".json", HttpService:JSONEncode(data))
+    self:Notify("Profile Disimpan", '"' .. safe .. '" berhasil disimpan.', "success")
+    self:RefreshSaveProfiles()
+    return true
+end
+
+function ZyphoraLibrary:DeleteProfile(profileName)
+    if not delfile then self:Notify("Gagal", "Executor tidak support delfile.", "error"); return false end
+    local safe = SanitizeName(profileName)
+    local path = self.SaveFolder .. "/" .. safe .. ".json"
+    if not FileExists(path) then self:Notify("Gagal", "Profile tidak ditemukan.", "error"); return false end
+    local ok = pcall(delfile, path)
+    if not ok then self:Notify("Gagal", "Profile gagal dihapus.", "error"); return false end
+    self:Notify("Profile Dihapus", '"' .. safe .. '" berhasil dihapus.', "error")
+    self:RefreshSaveProfiles()
+    return true
+end
+
+function ZyphoraLibrary:LoadProfile(profileName)
+    if not readfile then self:Notify("Gagal", "Executor tidak support readfile.", "error"); return false end
+    local safe = SanitizeName(profileName)
+    local path = self.SaveFolder .. "/" .. safe .. ".json"
+    if not FileExists(path) then self:Notify("Gagal", "Profile tidak ditemukan.", "error"); return false end
+    local ok, raw = pcall(readfile, path)
+    if not ok then self:Notify("Gagal", "File gagal dibaca.", "error"); return false end
+    local okD, data = pcall(function() return HttpService:JSONDecode(raw) end)
+    if not okD or type(data) ~= "table" then self:Notify("Gagal", "Format profile invalid.", "error"); return false end
+    if data.Theme then
+        for k,v in pairs(data.Theme) do self.Theme[k] = HexToColor(v, self.Theme[k]) end
+    end
+    if data.Toggles then
+        for name,value in pairs(data.Toggles) do
+            local reg = self.ToggleRegistry and self.ToggleRegistry[name]
+            if reg and reg.SetState then reg.SetState(value, true) end
+        end
+    end
+    self:ApplyTheme(self.Theme)
+    self:Notify("Profile Dimuat", '"' .. safe .. '" berhasil dimuat.', "success")
+    return true
+end
+
+-- ─────────────────────────────────────────
+--  CONSTRUCTOR
+-- ─────────────────────────────────────────
+function ZyphoraLibrary.new(_, title)
+    local self = setmetatable({}, ZyphoraLibrary)
+
+    self.Tabs           = {}
+    self.CurrentTab     = nil
+    self.Minimized      = false
+    self.Hidden         = false
+    self.ControlRegistry= {}
+    self.ToggleRegistry = {}
+    self.ToggleStates   = {}
+    self.Categories     = {}
+    self._uiRefs        = {}
+
+    self.FixedHubName = "Zyphora Hub"
+    self.SaveFolder   = "ZyphoraLibrarySaves/" .. SanitizeName(self.FixedHubName)
+    EnsureFolder("ZyphoraLibrarySaves")
+    EnsureFolder(self.SaveFolder)
+
+    -- Deep copy default theme
+    self.Theme = {}
+    for k,v in pairs(DEFAULT_THEME) do self.Theme[k] = v end
+
+    local T = self.Theme
+
+    -- ── ScreenGui ──
+    local ScreenGui = New("ScreenGui", {
+        Name = "ZyphoraUI_" .. math.random(10000,99999),
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        Parent = CoreGui,
+    })
+    self.ScreenGui = ScreenGui
+
+    -- ── Main Frame ──
+    local MainFrame = New("Frame", {
+        Name = "MainFrame",
+        Size = UDim2.new(0, 520, 0, 340),
+        Position = UDim2.new(0.5,-260, 0.5,-170),
+        BackgroundColor3 = T.BG,
+        BorderSizePixel = 0,
+        Active = true,
+        Draggable = true,
+        Parent = ScreenGui,
+    })
+    Corner(MainFrame, 12)
+    local MainStroke = Stroke(MainFrame, T.Border, 1.2, 0)
+    self.MainFrame = MainFrame
+    self._uiRefs.MainFrame = MainFrame
+    self._uiRefs.MainStroke = MainStroke
+
+    -- Subtle inner glow overlay on main frame
+    local FrameGlow = New("ImageLabel", {
+        Name = "FrameGlow",
+        Size = UDim2.new(1,0,0,120),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://7912134082",
+        ImageColor3 = T.Accent,
+        ImageTransparency = 0.92,
+        ZIndex = 0,
+        Parent = MainFrame,
+    })
+
+    -- ── Notif Holder ──
+    local NotifHolder = New("Frame", {
+        Name = "NotifHolder",
+        Size = UDim2.new(0,290,1,-30),
+        Position = UDim2.new(1,-300,0,15),
+        BackgroundTransparency = 1,
+        Parent = ScreenGui,
+    })
+    New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        VerticalAlignment = Enum.VerticalAlignment.Bottom,
+        Padding = UDim.new(0,8),
+        Parent = NotifHolder,
+    })
+    self.NotifHolder = NotifHolder
+
+    -- ── Toggle Button (Draggable) ──
+    local ToggleBtn = New("TextButton", {
+        Name = "ZyphoraToggle",
+        Size = UDim2.new(0,46,0,46),
+        Position = UDim2.new(0,16,0,16),
+        BackgroundColor3 = Color3.fromRGB(18,14,32),
+        Text = "",
+        Active = true,
+        Draggable = true,
+        ZIndex = 12,
+        Parent = ScreenGui,
+    })
+    Corner(ToggleBtn, 50)
+    local TBStroke = Stroke(ToggleBtn, T.Accent, 1.5)
+
+    -- Glow ring
+    local ToggleGlow = New("ImageLabel", {
+        Name = "ToggleGlow",
+        Size = UDim2.new(0,76,0,76),
+        Position = UDim2.new(0,0,0,0),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://107432428920238",
+        ImageColor3 = T.Accent,
+        ImageTransparency = 0.4,
+        ZIndex = 11,
+        Parent = ScreenGui,
+    })
+
+    -- Icon
+    local ToggleIcon = New("ImageLabel", {
+        Name = "ToggleIcon",
+        Size = UDim2.new(0,20,0,20),
+        BackgroundTransparency = 1,
+        Image = ResolveIcon(109526457219648) or "",
+        ImageColor3 = T.AccentBright,
+        ZIndex = 13,
+        Parent = ScreenGui,
+    })
+
+    -- Sync positions on drag
+    local function SyncToggleChildren()
+        local pos = ToggleBtn.AbsolutePosition
+        ToggleGlow.Position = UDim2.new(0, pos.X-15, 0, pos.Y-15)
+        ToggleIcon.Position = UDim2.new(0, pos.X+13, 0, pos.Y+13)
+    end
+    ToggleBtn:GetPropertyChangedSignal("AbsolutePosition"):Connect(SyncToggleChildren)
+    SyncToggleChildren()
+
+    -- Glow rotation
+    Tween(ToggleGlow, TI(3, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), { Rotation = 360 })
+
+    -- Hover/click
+    ToggleBtn.MouseEnter:Connect(function()
+        TFast(ToggleBtn, { BackgroundColor3 = Color3.fromRGB(35,22,60) })
+        TFast(TBStroke, { Thickness = 2.5, Color = T.AccentBright })
+        TFast(ToggleGlow, { ImageTransparency = 0.1 })
+    end)
+    ToggleBtn.MouseLeave:Connect(function()
+        TFast(ToggleBtn, { BackgroundColor3 = Color3.fromRGB(18,14,32) })
+        TFast(TBStroke, { Thickness = 1.5, Color = T.Accent })
+        TFast(ToggleGlow, { ImageTransparency = 0.4 })
+    end)
+    ToggleBtn.MouseButton1Click:Connect(function()
+        TFast(ToggleBtn, { BackgroundColor3 = T.Accent })
+        task.wait(0.1)
+        TFast(ToggleBtn, { BackgroundColor3 = Color3.fromRGB(18,14,32) })
+    end)
+
+    -- Hint label on hover
+    local HintFrame = New("Frame", {
+        Name = "HintFrame",
+        Size = UDim2.new(0,0,0,26),
+        BackgroundColor3 = Color3.fromRGB(18,14,32),
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = 12,
+        Visible = false,
+        Parent = ScreenGui,
+    })
+    Corner(HintFrame, 6)
+    Stroke(HintFrame, T.Accent, 1)
+
+    local HintTxt = New("TextLabel", {
+        Size = UDim2.new(1,-16,1,0),
+        Position = UDim2.new(0,8,0,0),
+        BackgroundTransparency = 1,
+        Text = "Zyphora Hub",
+        TextColor3 = T.AccentBright,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTransparency = 1,
+        ZIndex = 13,
+        Parent = HintFrame,
+    })
+
+    ToggleBtn:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+        local pos = ToggleBtn.AbsolutePosition
+        HintFrame.Position = UDim2.new(0, pos.X+54, 0, pos.Y+10)
+    end)
+
+    ToggleBtn.MouseEnter:Connect(function()
+        local pos = ToggleBtn.AbsolutePosition
+        HintFrame.Position = UDim2.new(0, pos.X+54, 0, pos.Y+10)
+        HintFrame.Visible = true
+        HintFrame.Size = UDim2.new(0,0,0,26)
+        HintTxt.TextTransparency = 1
+        TSpring(HintFrame, { Size = UDim2.new(0,100,0,26) })
+        TFast(HintTxt, { TextTransparency = 0 })
+    end)
+    ToggleBtn.MouseLeave:Connect(function()
+        TFast(HintFrame, { Size = UDim2.new(0,0,0,26) })
+        TFast(HintTxt, { TextTransparency = 1 })
+        task.delay(0.15, function() if HintFrame then HintFrame.Visible = false end end)
+    end)
+
+    -- ── Minimize / Hide ──
+    local function MinimizeWindow()
+        if self.Hidden then return end
+        self.Minimized = not self.Minimized
+        local target = self.Minimized and UDim2.new(0,520,0,40) or UDim2.new(0,520,0,340)
+        TweenService:Create(MainFrame, TI(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = target }):Play()
+        local show = not self.Minimized
+        task.delay(self.Minimized and 0 or 0.15, function()
+            if self._uiRefs.SidebarBg then self._uiRefs.SidebarBg.Visible = show end
+            if self._uiRefs.SidebarDiv then self._uiRefs.SidebarDiv.Visible = show end
+            if self.Sidebar then self.Sidebar.Visible = show end
+            if self._uiRefs.SearchBar then self._uiRefs.SearchBar.Visible = show end
+            if self.ContentHolder then self.ContentHolder.Visible = show end
+        end)
+    end
+
+    local function ToggleHideWindow()
+        self.Hidden = not self.Hidden
+        if self.Hidden then
+            local tw = TweenService:Create(MainFrame, TI(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                BackgroundTransparency = 1, Size = UDim2.new(0,520,0,0)
+            })
+            tw:Play()
+            tw.Completed:Once(function() MainFrame.Visible = false end)
+        else
+            MainFrame.Visible = true
+            MainFrame.BackgroundTransparency = 1
+            MainFrame.Size = UDim2.new(0,520,0,0)
+            local target = self.Minimized and UDim2.new(0,520,0,40) or UDim2.new(0,520,0,340)
+            TSpring(MainFrame, { BackgroundTransparency = 0, Size = target })
+            if not self.Minimized then
+                task.delay(0.1, function()
+                    if self._uiRefs.SidebarBg then self._uiRefs.SidebarBg.Visible = true end
+                    if self._uiRefs.SidebarDiv then self._uiRefs.SidebarDiv.Visible = true end
+                    if self.Sidebar then self.Sidebar.Visible = true end
+                    if self._uiRefs.SearchBar then self._uiRefs.SearchBar.Visible = true end
+                    if self.ContentHolder then self.ContentHolder.Visible = true end
+                end)
+            end
+        end
+    end
+    ToggleBtn.MouseButton1Click:Connect(ToggleHideWindow)
+
+    -- ── Top Bar ──
+    local TopBar = New("Frame", {
+        Name = "TopBar",
+        Size = UDim2.new(1,0,0,40),
+        BackgroundColor3 = T.BGSecondary,
+        BorderSizePixel = 0,
+        ClipsDescendants = false,
+        Parent = MainFrame,
+    })
+    Corner(TopBar, 12)
+    -- Fix bottom corners
+    New("Frame", {
+        Name = "TopFix",
+        Size = UDim2.new(1,0,0,12),
+        Position = UDim2.new(0,0,1,-12),
+        BackgroundColor3 = T.BGSecondary,
+        BorderSizePixel = 0,
+        Parent = TopBar,
+    })
+    -- Bottom border line
+    New("Frame", {
+        Name = "BottomLine",
+        Size = UDim2.new(1,0,0,1),
+        Position = UDim2.new(0,0,1,-1),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = TopBar,
+    })
+    -- Subtle accent gradient on top bar
+    local TopGrad = New("Frame", {
+        Name = "TopGrad",
+        Size = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 0,
+        BorderSizePixel = 0,
+        ZIndex = 0,
+        Parent = TopBar,
+    })
+    Corner(TopGrad, 12)
+    Gradient(TopGrad, { Color3.fromRGB(25,20,45), T.BGSecondary }, 90)
+
+    self.TopBar = TopBar
+    self._uiRefs.TopBar = TopBar
+
+    -- Window icon (small dot accent)
+    local WinDot = New("Frame", {
+        Name = "WinDot",
+        Size = UDim2.new(0,6,0,6),
+        Position = UDim2.new(0,14,0.5,-3),
+        BackgroundColor3 = T.Accent,
+        BorderSizePixel = 0,
+        Parent = TopBar,
+    })
+    Corner(WinDot, 50)
+    -- Pulsing glow on dot
+    local DotGlow = New("Frame", {
+        Size = UDim2.new(0,12,0,12),
+        Position = UDim2.new(0.5,-6,0.5,-6),
+        BackgroundColor3 = T.Accent,
+        BackgroundTransparency = 0.7,
+        BorderSizePixel = 0,
+        Parent = WinDot,
+    })
+    Corner(DotGlow, 50)
+    task.spawn(function()
+        while MainFrame and MainFrame.Parent do
+            TweenService:Create(DotGlow, TI(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.9 }):Play()
+            task.wait(0.8)
+            TweenService:Create(DotGlow, TI(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.5 }):Play()
+            task.wait(0.8)
+        end
+    end)
+
+    local MainIcon = New("ImageLabel", {
+        Name = "WindowIcon",
+        Size = UDim2.new(0,16,0,16),
+        Position = UDim2.new(0,26,0.5,-8),
+        BackgroundTransparency = 1,
+        Image = ResolveIcon(98755624629571) or "",
+        ImageColor3 = T.AccentBright,
+        Parent = TopBar,
+    })
+
+    local TitleLabel = New("TextLabel", {
+        Name = "TitleText",
+        Size = UDim2.new(1,-120,1,0),
+        Position = UDim2.new(0,48,0,0),
+        BackgroundTransparency = 1,
+        Text = self.FixedHubName .. " <font color='#6C3BFF'>│</font> <font color='#9B8FBF'>" .. tostring(title) .. "</font>",
+        TextColor3 = T.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        RichText = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = TopBar,
+    })
+
+    -- Close button
+    local CloseBtn = New("TextButton", {
+        Name = "CloseBtn",
+        Size = UDim2.new(0,26,0,26),
+        Position = UDim2.new(1,-32,0.5,-13),
+        BackgroundColor3 = T.Surface,
+        BackgroundTransparency = 0.3,
+        Text = "×",
+        TextColor3 = T.Error,
+        TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = TopBar,
+    })
+    Corner(CloseBtn, 6)
+    CloseBtn.MouseEnter:Connect(function() TFast(CloseBtn, { BackgroundColor3 = T.Error, BackgroundTransparency = 0 }) end)
+    CloseBtn.MouseLeave:Connect(function() TFast(CloseBtn, { BackgroundColor3 = T.Surface, BackgroundTransparency = 0.3 }) end)
+    CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+    -- Minimize button
+    local MinBtn = New("TextButton", {
+        Name = "MinBtn",
+        Size = UDim2.new(0,26,0,26),
+        Position = UDim2.new(1,-62,0.5,-13),
+        BackgroundColor3 = T.Surface,
+        BackgroundTransparency = 0.5,
+        Text = "−",
+        TextColor3 = T.TextDim,
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = TopBar,
+    })
+    Corner(MinBtn, 6)
+    MinBtn.MouseEnter:Connect(function() TFast(MinBtn, { BackgroundTransparency = 0 }) end)
+    MinBtn.MouseLeave:Connect(function() TFast(MinBtn, { BackgroundTransparency = 0.5 }) end)
+    MinBtn.MouseButton1Click:Connect(MinimizeWindow)
+
+    -- ── Sidebar ──
+    local SidebarBg = New("Frame", {
+        Name = "SidebarBg",
+        Size = UDim2.new(0,130,1,-40),
+        Position = UDim2.new(0,0,0,40),
+        BackgroundColor3 = T.BGTertiary,
+        BorderSizePixel = 0,
+        Parent = MainFrame,
+    })
+    self._uiRefs.SidebarBg = SidebarBg
+
+    local SidebarDiv = New("Frame", {
+        Name = "SidebarDiv",
+        Size = UDim2.new(0,1,1,-40),
+        Position = UDim2.new(0,130,0,40),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = MainFrame,
+    })
+    self._uiRefs.SidebarDiv = SidebarDiv
+
+    local Sidebar = New("ScrollingFrame", {
+        Name = "Sidebar",
+        Size = UDim2.new(1,-8,1,-8),
+        Position = UDim2.new(0,4,0,4),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 0,
+        CanvasSize = UDim2.new(0,0,0,0),
+        Parent = SidebarBg,
+    })
+    self.Sidebar = Sidebar
+
+    local SidebarLayout = New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,3),
+        Parent = Sidebar,
+    })
+    SidebarLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        Sidebar.CanvasSize = UDim2.new(0,0,0, SidebarLayout.AbsoluteContentSize.Y + 8)
+    end)
+
+    -- ── Search Bar ──
+    local SearchBarContainer = New("Frame", {
+        Name = "SearchBar",
+        Size = UDim2.new(1,-150,0,32),
+        Position = UDim2.new(0,140,0,46),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        Parent = MainFrame,
+    })
+    Corner(SearchBarContainer, 8)
+    local SearchBarStroke = Stroke(SearchBarContainer, T.Border, 1)
+    self._uiRefs.SearchBar = SearchBarContainer
+    self._uiRefs.SearchBarStroke = SearchBarStroke
+
+    local SearchIcon = New("ImageLabel", {
+        Name = "SearchIcon",
+        Size = UDim2.new(0,13,0,13),
+        Position = UDim2.new(0,10,0.5,-6),
+        BackgroundTransparency = 1,
+        Image = ResolveIcon(10723344432) or "",
+        ImageColor3 = T.TextMuted,
+        Parent = SearchBarContainer,
+    })
+    self._uiRefs.SearchIcon = SearchIcon
+
+    local SearchBox = New("TextBox", {
+        Name = "SearchBox",
+        Size = UDim2.new(1,-36,1,0),
+        Position = UDim2.new(0,30,0,0),
+        BackgroundTransparency = 1,
+        Text = "",
+        PlaceholderText = "Cari fitur...",
+        PlaceholderColor3 = T.TextMuted,
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        Parent = SearchBarContainer,
+    })
+    self._uiRefs.SearchBox = SearchBox
+    self.SearchInput = SearchBox
+
+    SearchBox.Focused:Connect(function() TFast(SearchBarStroke, { Color = T.Accent }) end)
+    SearchBox.FocusLost:Connect(function() TFast(SearchBarStroke, { Color = T.Border }) end)
+
+    SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local q = string.lower(SearchBox.Text)
+        if self.CurrentTab then
+            for _, item in ipairs(self.CurrentTab.Elements or {}) do
+                if item.Instance then
+                    item.Instance.Visible = q == "" or string.find(string.lower(item.Name), q) ~= nil
+                end
+            end
+        end
+    end)
+
+    -- ── Content Holder ──
+    local ContentHolder = New("Frame", {
+        Name = "ContentHolder",
+        Size = UDim2.new(1,-150,1,-92),
+        Position = UDim2.new(0,140,0,86),
+        BackgroundTransparency = 1,
+        Parent = MainFrame,
+    })
+    self.ContentHolder = ContentHolder
+
+    function self:RefreshCurrentSearch()
+        if self.SearchInput then self.SearchInput.Text = "" end
+    end
+
+    -- ─────────────────────────────────────────
+    --  BUILT-IN TABS (deferred)
+    -- ─────────────────────────────────────────
+    task.defer(function()
+
+        -- ════════════════════════════════════════
+        --  CREDITS TAB
+        -- ════════════════════════════════════════
+        local CreditTab = self:CreateTab("Credits", 124560466474914)
+
+        -- Hero Banner
+        local Hero = New("Frame", {
+            Name = "Hero",
+            Size = UDim2.new(1,-4,0,72),
+            BackgroundColor3 = Color3.fromRGB(10,8,20),
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            Parent = CreditTab.ScrollBox,
+        })
+        Corner(Hero, 10)
+        Stroke(Hero, T.Border, 1)
+
+        Gradient(Hero, {
+            Color3.fromRGB(60,30,130),
+            Color3.fromRGB(20,16,48),
+            Color3.fromRGB(10,8,20),
+        }, 115)
+
+        -- Accent line
+        local HeroAccent = New("Frame", {
+            Size = UDim2.new(0,3,1,-20),
+            Position = UDim2.new(0,0,0,10),
+            BackgroundColor3 = T.Accent,
+            BorderSizePixel = 0,
+            Parent = Hero,
+        })
+        Corner(HeroAccent, 2)
+
+        New("TextLabel", {
+            Size = UDim2.new(1,-80,0,26),
+            Position = UDim2.new(0,16,0,10),
+            BackgroundTransparency = 1,
+            Text = "Zyphora HUB",
+            TextColor3 = Color3.fromRGB(228,220,255),
+            TextSize = 18,
+            Font = Enum.Font.GothamBlack,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = Hero,
+        })
+        New("TextLabel", {
+            Size = UDim2.new(1,-80,0,14),
+            Position = UDim2.new(0,16,0,38),
+            BackgroundTransparency = 1,
+            Text = "Private Build  ·  V3.0  ·  2026",
+            TextColor3 = T.TextMuted,
+            TextSize = 10,
+            Font = Enum.Font.GothamMedium,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = Hero,
+        })
+
+        -- Version pill
+        local VerPill = New("Frame", {
+            Size = UDim2.new(0,48,0,20),
+            Position = UDim2.new(1,-56,0.5,-10),
+            BackgroundColor3 = T.Accent,
+            BorderSizePixel = 0,
+            Parent = Hero,
+        })
+        Corner(VerPill, 6)
+        New("TextLabel", {
+            Size = UDim2.new(1,0,1,0),
+            BackgroundTransparency = 1,
+            Text = "V3.0",
+            TextColor3 = Color3.fromRGB(255,255,255),
+            TextSize = 10,
+            Font = Enum.Font.GothamBold,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            Parent = VerPill,
+        })
+
+        -- Section helper
+        local function CreditSection(label)
+            local Wrap = New("Frame", {
+                Size = UDim2.new(1,-4,0,18),
+                BackgroundTransparency = 1,
+                Parent = CreditTab.ScrollBox,
+            })
+            local Line = New("Frame", {
+                Size = UDim2.new(1,0,0,1),
+                Position = UDim2.new(0,0,0.5,0),
+                BackgroundColor3 = T.Border,
+                BorderSizePixel = 0,
+                Parent = Wrap,
+            })
+            local Chip = New("Frame", {
+                Size = UDim2.new(0,0,1,0),
+                AutomaticSize = Enum.AutomaticSize.X,
+                Position = UDim2.new(0,0,0,0),
+                BackgroundColor3 = T.BGTertiary,
+                BorderSizePixel = 0,
+                Parent = Wrap,
+            })
+            New("TextLabel", {
+                Size = UDim2.new(0,0,1,0),
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundTransparency = 1,
+                Text = "  " .. string.upper(label) .. "  ",
+                TextColor3 = T.TextMuted,
+                TextSize = 8,
+                Font = Enum.Font.GothamBold,
+                Parent = Chip,
+            })
+        end
+
+        CreditSection("Developer")
+
+        -- Owner Card
+        local OwnerCard = New("Frame", {
+            Name = "OwnerCard",
+            Size = UDim2.new(1,-4,0,68),
+            BackgroundColor3 = T.Surface,
+            BorderSizePixel = 0,
+            Parent = CreditTab.ScrollBox,
+        })
+        Corner(OwnerCard, 10)
+        Stroke(OwnerCard, T.Border, 1)
+
+        -- Subtle gradient
+        local OGrad = New("Frame", {
+            Size = UDim2.new(1,0,1,0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Parent = OwnerCard,
+        })
+        Corner(OGrad, 10)
+        Gradient(OGrad, { Color3.fromRGB(25,18,50), T.Surface }, 90)
+
+        local OwnerAccent = New("Frame", {
+            Size = UDim2.new(0,3,1,-20),
+            Position = UDim2.new(0,0,0,10),
+            BackgroundColor3 = T.Accent,
+            BorderSizePixel = 0,
+            Parent = OwnerCard,
+        })
+        Corner(OwnerAccent, 2)
+
+        -- Avatar
+        local AvatarRing = New("Frame", {
+            Size = UDim2.new(0,46,0,46),
+            Position = UDim2.new(0,12,0.5,-23),
+            BackgroundColor3 = T.SurfaceHigh,
+            BorderSizePixel = 0,
+            Parent = OwnerCard,
+        })
+        Corner(AvatarRing, 50)
+        Stroke(AvatarRing, T.Accent, 1.5)
+
+        local Avatar = New("ImageLabel", {
+            Size = UDim2.new(1,-4,1,-4),
+            Position = UDim2.new(0,2,0,2),
+            BackgroundTransparency = 1,
+            ScaleType = Enum.ScaleType.Fit,
+            Parent = AvatarRing,
+        })
+        Corner(Avatar, 50)
+        pcall(function()
+            Avatar.Image = Players:GetUserThumbnailAsync(10652722254, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+        end)
+
+        local OnlineDot = New("Frame", {
+            Size = UDim2.new(0,10,0,10),
+            Position = UDim2.new(1,-10,1,-10),
+            BackgroundColor3 = T.Success,
+            BorderSizePixel = 0,
+            ZIndex = 3,
+            Parent = AvatarRing,
+        })
+        Corner(OnlineDot, 50)
+        Stroke(OnlineDot, T.Surface, 2)
+
+        New("TextLabel", {
+            Size = UDim2.new(1,-160,0,20),
+            Position = UDim2.new(0,68,0,12),
+            BackgroundTransparency = 1,
+            Text = "Zyphora",
+            TextColor3 = T.Text,
+            TextSize = 14,
+            Font = Enum.Font.GothamBlack,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = OwnerCard,
+        })
+
+        local OwnerBadge = New("Frame", {
+            Size = UDim2.new(0,50,0,14),
+            Position = UDim2.new(0,68,0,34),
+            BackgroundColor3 = T.Accent,
+            BorderSizePixel = 0,
+            Parent = OwnerCard,
+        })
+        Corner(OwnerBadge, 4)
+        New("TextLabel", {
+            Size = UDim2.new(1,0,1,0),
+            BackgroundTransparency = 1,
+            Text = "OWNER",
+            TextColor3 = Color3.fromRGB(255,255,255),
+            TextSize = 8,
+            Font = Enum.Font.GothamBold,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            Parent = OwnerBadge,
+        })
+
+        New("TextLabel", {
+            Size = UDim2.new(1,-160,0,12),
+            Position = UDim2.new(0,68,0,52),
+            BackgroundTransparency = 1,
+            Text = "UI  ·  Scripting  ·  Design",
+            TextColor3 = T.TextMuted,
+            TextSize = 9,
+            Font = Enum.Font.GothamMedium,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = OwnerCard,
+        })
+
+        local CopyBtn = New("TextButton", {
+            Size = UDim2.new(0,56,0,24),
+            Position = UDim2.new(1,-64,0.5,-12),
+            BackgroundColor3 = T.SurfaceHigh,
+            Text = "Copy",
+            TextColor3 = T.AccentBright,
+            TextSize = 10,
+            Font = Enum.Font.GothamBold,
+            BorderSizePixel = 0,
+            Parent = OwnerCard,
+        })
+        Corner(CopyBtn, 6)
+        Stroke(CopyBtn, T.Accent, 1)
+        CopyBtn.MouseEnter:Connect(function() TFast(CopyBtn, { BackgroundColor3 = T.Accent, TextColor3 = Color3.fromRGB(255,255,255) }) end)
+        CopyBtn.MouseLeave:Connect(function() TFast(CopyBtn, { BackgroundColor3 = T.SurfaceHigh, TextColor3 = T.AccentBright }) end)
+        CopyBtn.MouseButton1Click:Connect(function()
+            if setclipboard then setclipboard("Zyphora") end
+            local orig = CopyBtn.Text; CopyBtn.Text = "✓ Copied"
+            task.wait(1.5); CopyBtn.Text = orig
+            self:Notify("Clipboard", "Username berhasil disalin.", "success")
+        end)
+
+        CreditSection("Stats")
+
+        -- Stats Row
+        local StatsRow = New("Frame", {
+            Size = UDim2.new(1,-4,0,48),
+            BackgroundTransparency = 1,
+            Parent = CreditTab.ScrollBox,
+        })
+        New("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal,
+            Padding = UDim.new(0,4),
+            Parent = StatsRow,
+        })
+
+        local stats = {
+            { label = "Versi", value = "V3.0", color = T.AccentBright },
+            { label = "Status", value = "Private", color = T.Warning },
+            { label = "Build", value = "Stable", color = T.Success },
+        }
+        for _, s in ipairs(stats) do
+            local Card = New("Frame", {
+                Size = UDim2.new(1/3,-3,1,0),
+                BackgroundColor3 = T.Surface,
+                BorderSizePixel = 0,
+                Parent = StatsRow,
+            })
+            Corner(Card, 8)
+            Stroke(Card, T.Border, 1)
+            New("TextLabel", {
+                Size = UDim2.new(1,-10,0,22),
+                Position = UDim2.new(0,8,0,4),
+                BackgroundTransparency = 1,
+                Text = s.value,
+                TextColor3 = s.color,
+                TextSize = 13,
+                Font = Enum.Font.GothamBlack,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = Card,
+            })
+            New("TextLabel", {
+                Size = UDim2.new(1,-10,0,12),
+                Position = UDim2.new(0,8,1,-16),
+                BackgroundTransparency = 1,
+                Text = s.label,
+                TextColor3 = T.TextMuted,
+                TextSize = 8,
+                Font = Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = Card,
+            })
+        end
+
+        CreditSection("Changelog")
+
+        local logs = {
+            { ver = "V3.0", desc = "Full visual overhaul, spring animations, redesigned all controls" },
+            { ver = "V2.5", desc = "Credits redesign, hero banner, contributor row" },
+            { ver = "V2.4", desc = "Profile manager, save & load system" },
+            { ver = "V2.0", desc = "Category sidebar, search bar, minimize" },
+        }
+        for i, log in ipairs(logs) do
+            local isNew = i == 1
+            local LogRow = New("Frame", {
+                Size = UDim2.new(1,-4,0,34),
+                BackgroundColor3 = T.Surface,
+                BorderSizePixel = 0,
+                Parent = CreditTab.ScrollBox,
+            })
+            Corner(LogRow, 8)
+            Stroke(LogRow, isNew and T.Accent or T.Border, isNew and 1.2 or 1)
+
+            if isNew then
+                Gradient(LogRow, { Color3.fromRGB(25,18,50), T.Surface }, 90)
+            end
+
+            local Badge = New("Frame", {
+                Size = UDim2.new(0,38,0,18),
+                Position = UDim2.new(0,10,0.5,-9),
+                BackgroundColor3 = isNew and T.Accent or T.SurfaceHigh,
+                BorderSizePixel = 0,
+                Parent = LogRow,
+            })
+            Corner(Badge, 5)
+            New("TextLabel", {
+                Size = UDim2.new(1,0,1,0),
+                BackgroundTransparency = 1,
+                Text = log.ver,
+                TextColor3 = isNew and Color3.fromRGB(255,255,255) or T.TextMuted,
+                TextSize = 9,
+                Font = Enum.Font.GothamBold,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                Parent = Badge,
+            })
+            New("TextLabel", {
+                Size = UDim2.new(1,-62,1,0),
+                Position = UDim2.new(0,56,0,0),
+                BackgroundTransparency = 1,
+                Text = log.desc,
+                TextColor3 = isNew and T.Text or T.TextDim,
+                TextSize = 10,
+                Font = isNew and Enum.Font.GothamMedium or Enum.Font.Gotham,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextWrapped = true,
+                Parent = LogRow,
+            })
+        end
+
+        CreditSection("Sosial")
+
+        local SocRow = New("Frame", {
+            Size = UDim2.new(1,-4,0,32),
+            BackgroundTransparency = 1,
+            Parent = CreditTab.ScrollBox,
+        })
+        New("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal,
+            Padding = UDim.new(0,4),
+            Parent = SocRow,
+        })
+
+        local socials = {
+            { label = "Saluran", color = Color3.fromRGB(220,60,60), copy = "https://whatsapp.com/channel/0029Vb8PZy4HwXbBtQmAJ73m" },
+            { label = "Roblox",  color = T.AccentBright,             copy = "roblox.com/users/10652722254" },
+        }
+        for _, soc in ipairs(socials) do
+            local SBtn = New("TextButton", {
+                Size = UDim2.new(1/2,-2,1,0),
+                BackgroundColor3 = T.Surface,
+                Text = soc.label,
+                TextColor3 = soc.color,
+                TextSize = 10,
+                Font = Enum.Font.GothamBold,
+                BorderSizePixel = 0,
+                Parent = SocRow,
+            })
+            Corner(SBtn, 7)
+            Stroke(SBtn, soc.color, 1, 0.3)
+            SBtn.MouseEnter:Connect(function() TFast(SBtn, { BackgroundColor3 = soc.color, TextColor3 = Color3.fromRGB(255,255,255) }) end)
+            SBtn.MouseLeave:Connect(function() TFast(SBtn, { BackgroundColor3 = T.Surface, TextColor3 = soc.color }) end)
+            SBtn.MouseButton1Click:Connect(function()
+                if setclipboard then setclipboard(soc.copy) end
+                self:Notify("Sosial", soc.label .. " link disalin.", "success")
+            end)
+        end
+
+        -- Footer
+        local Footer = New("Frame", {
+            Size = UDim2.new(1,-4,0,26),
+            BackgroundColor3 = T.BGSecondary,
+            BorderSizePixel = 0,
+            Parent = CreditTab.ScrollBox,
+        })
+        Corner(Footer, 7)
+        New("TextLabel", {
+            Size = UDim2.new(1,-12,1,0),
+            Position = UDim2.new(0,6,0,0),
+            BackgroundTransparency = 1,
+            Text = "Copyright 2026  ·  Zyphora Hub  ·  All rights reserved",
+            TextColor3 = T.TextMuted,
+            TextSize = 8,
+            Font = Enum.Font.GothamMedium,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            Parent = Footer,
+        })
+
+        -- ════════════════════════════════════════
+        --  SETTINGS TAB
+        -- ════════════════════════════════════════
+        local SettingsTab = self:CreateTab("Settings", 80758916183665, true)
+
+        local Presets = {
+            ["Default"] = {
+                BG=Color3.fromRGB(8,8,14), BGSecondary=Color3.fromRGB(12,12,20),
+                BGTertiary=Color3.fromRGB(16,16,26), Surface=Color3.fromRGB(20,20,32),
+                SurfaceHigh=Color3.fromRGB(26,24,40), SurfaceTop=Color3.fromRGB(30,28,46),
+                Border=Color3.fromRGB(38,36,60), BorderLight=Color3.fromRGB(55,52,85),
+                Accent=Color3.fromRGB(108,59,255), AccentBright=Color3.fromRGB(155,110,255),
+                AccentDim=Color3.fromRGB(75,42,180), Text=Color3.fromRGB(240,238,252),
+                TextDim=Color3.fromRGB(165,160,190), TextMuted=Color3.fromRGB(95,90,120),
+            },
+            ["Purple Dark"] = {
+                BG=Color3.fromRGB(12,10,20), BGSecondary=Color3.fromRGB(18,15,30),
+                BGTertiary=Color3.fromRGB(22,18,36), Surface=Color3.fromRGB(28,22,44),
+                SurfaceHigh=Color3.fromRGB(36,28,58), SurfaceTop=Color3.fromRGB(44,34,68),
+                Border=Color3.fromRGB(55,42,88), BorderLight=Color3.fromRGB(75,58,115),
+                Accent=Color3.fromRGB(180,100,255), AccentBright=Color3.fromRGB(210,155,255),
+                AccentDim=Color3.fromRGB(130,68,200), Text=Color3.fromRGB(248,244,255),
+                TextDim=Color3.fromRGB(180,170,200), TextMuted=Color3.fromRGB(115,100,145),
+            },
+            ["Blue Ice"] = {
+                BG=Color3.fromRGB(8,12,20), BGSecondary=Color3.fromRGB(12,18,30),
+                BGTertiary=Color3.fromRGB(14,22,36), Surface=Color3.fromRGB(18,28,44),
+                SurfaceHigh=Color3.fromRGB(24,36,58), SurfaceTop=Color3.fromRGB(28,42,68),
+                Border=Color3.fromRGB(36,55,90), BorderLight=Color3.fromRGB(52,78,125),
+                Accent=Color3.fromRGB(80,160,255), AccentBright=Color3.fromRGB(130,195,255),
+                AccentDim=Color3.fromRGB(55,115,200), Text=Color3.fromRGB(238,244,255),
+                TextDim=Color3.fromRGB(160,175,200), TextMuted=Color3.fromRGB(90,115,155),
+            },
+            ["Red Neon"] = {
+                BG=Color3.fromRGB(14,8,10), BGSecondary=Color3.fromRGB(22,12,14),
+                BGTertiary=Color3.fromRGB(28,14,16), Surface=Color3.fromRGB(36,18,20),
+                SurfaceHigh=Color3.fromRGB(48,22,26), SurfaceTop=Color3.fromRGB(58,26,30),
+                Border=Color3.fromRGB(78,32,38), BorderLight=Color3.fromRGB(110,46,54),
+                Accent=Color3.fromRGB(255,80,100), AccentBright=Color3.fromRGB(255,135,150),
+                AccentDim=Color3.fromRGB(200,55,72), Text=Color3.fromRGB(252,240,242),
+                TextDim=Color3.fromRGB(200,170,175), TextMuted=Color3.fromRGB(155,100,110),
+            },
+            ["Green Matrix"] = {
+                BG=Color3.fromRGB(8,14,10), BGSecondary=Color3.fromRGB(10,20,12),
+                BGTertiary=Color3.fromRGB(12,24,14), Surface=Color3.fromRGB(14,30,16),
+                SurfaceHigh=Color3.fromRGB(18,38,20), SurfaceTop=Color3.fromRGB(22,46,24),
+                Border=Color3.fromRGB(28,60,32), BorderLight=Color3.fromRGB(40,85,45),
+                Accent=Color3.fromRGB(80,220,110), AccentBright=Color3.fromRGB(130,250,155),
+                AccentDim=Color3.fromRGB(55,165,78), Text=Color3.fromRGB(232,248,235),
+                TextDim=Color3.fromRGB(155,195,162), TextMuted=Color3.fromRGB(88,145,100),
+            },
+        }
+
+        local function ApplyPreset(name)
+            local p = Presets[name]; if not p then return end
+            for k,v in pairs(p) do self.Theme[k] = v end
+            self:ApplyTheme()
+        end
+
+        SettingsTab:AddLabel("Preset Tema", 10723344432, "Pilih dan terapkan tema instan", false)
+        local presetDrop = SettingsTab:AddDropdown("Pilih Preset", 10723344432, {"Default","Purple Dark","Blue Ice","Red Neon","Green Matrix"}, "Default", function() end)
+        SettingsTab:AddButton("Terapkan Preset", 10723344432, function()
+            local s = presetDrop:GetValue(); ApplyPreset(s)
+            self:Notify("Tema", 'Preset "' .. s .. '" diterapkan.', "success")
+        end)
+
+        SettingsTab:AddSectionDivider("Custom Theme")
+        local accentInput = SettingsTab:AddInput("Accent Color (HEX)", 10723344432, "#6C3BFF", function() end)
+        local bgInput = SettingsTab:AddInput("Background Color (HEX)", 10723344432, "#08080E", function() end)
+
+        self.SettingsRefs = { AccentBox = accentInput.Box, BackgroundBox = bgInput.Box }
+
+        SettingsTab:AddButton("Terapkan Custom Theme", 10723344432, function()
+            local accent = HexToColor(accentInput:GetValue(), self.Theme.Accent)
+            local bg = HexToColor(bgInput:GetValue(), self.Theme.BG)
+            local function sh(c, f) return Color3.fromRGB(math.clamp(math.floor(c.R*255*f),0,255), math.clamp(math.floor(c.G*255*f),0,255), math.clamp(math.floor(c.B*255*f),0,255)) end
+            self.Theme.Accent = accent; self.Theme.AccentBright = sh(accent,1.4); self.Theme.AccentDim = sh(accent,0.7)
+            self.Theme.BG = bg; self.Theme.BGSecondary = sh(bg,1.5); self.Theme.BGTertiary = sh(bg,2)
+            self.Theme.Surface = sh(bg,2.5); self.Theme.SurfaceHigh = sh(bg,3.2); self.Theme.SurfaceTop = sh(bg,3.8)
+            self.Theme.Border = sh(bg,4.5); self.Theme.BorderLight = sh(bg,6.5)
+            self.Theme.TextMuted = sh(bg,9)
+            self:ApplyTheme()
+            self:Notify("Tema Kustom", "Berhasil diterapkan.", "success")
+        end)
+
+        SettingsTab:AddButton("Reset Default", 10723344432, function()
+            ApplyPreset("Default"); presetDrop:SetValue("Default", false)
+            if self.SettingsRefs.AccentBox then self.SettingsRefs.AccentBox.Text = "#6C3BFF" end
+            if self.SettingsRefs.BackgroundBox then self.SettingsRefs.BackgroundBox.Text = "#08080E" end
+            self:Notify("Tema", "Dikembalikan ke Default.", "success")
+        end)
+
+        SettingsTab:AddSectionDivider("Profile Manager")
+        local profileInput = SettingsTab:AddInput("Nama Profile", 10723344432, "setup_1", function() end)
+        local saveDrop = SettingsTab:AddDropdown("Profile Tersimpan", 10723344432, {"Tidak ada profile"}, "Tidak ada profile", function() end)
+        self.SaveDropdown = saveDrop
+
+        -- Action buttons row
+        local ActionRow = New("Frame", {
+            Name = "ProfileActions",
+            Size = UDim2.new(1,-4,0,34),
+            BackgroundTransparency = 1,
+            Parent = SettingsTab.ScrollBox,
+        })
+        New("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal,
+            Padding = UDim.new(0,5),
+            Parent = ActionRow,
+        })
+
+        local function ActionBtn(label, color, order, cb)
+            local Btn = New("TextButton", {
+                LayoutOrder = order,
+                Size = UDim2.new(1/3,-4,1,0),
+                BackgroundColor3 = color,
+                BackgroundTransparency = 0.15,
+                Text = label,
+                TextColor3 = Color3.fromRGB(240,240,240),
+                TextSize = 11,
+                Font = Enum.Font.GothamBold,
+                BorderSizePixel = 0,
+                Parent = ActionRow,
+            })
+            Corner(Btn, 7)
+            Stroke(Btn, color, 1, 0.4)
+            Btn.MouseEnter:Connect(function() TFast(Btn, { BackgroundTransparency = 0 }) end)
+            Btn.MouseLeave:Connect(function() TFast(Btn, { BackgroundTransparency = 0.15 }) end)
+            Btn.MouseButton1Click:Connect(function()
+                TFast(Btn, { BackgroundTransparency = 0.5 })
+                task.wait(0.1)
+                TFast(Btn, { BackgroundTransparency = 0.15 })
+                pcall(cb)
+            end)
+        end
+
+        ActionBtn("Simpan", T.Success, 1, function()
+            local n = profileInput:GetValue()
+            if n == "" or n == "setup_1" then self:Notify("Gagal", "Isi nama profile dahulu.", "warning"); return end
+            self:SaveProfile(n)
+        end)
+        ActionBtn("Muat", T.AccentBright, 2, function()
+            local s = saveDrop:GetValue()
+            if not s or s == "Tidak ada profile" then self:Notify("Gagal", "Pilih profile dari dropdown.", "warning"); return end
+            self:LoadProfile(s)
+        end)
+        ActionBtn("Hapus", T.Error, 3, function()
+            local s = saveDrop:GetValue()
+            if not s or s == "Tidak ada profile" then self:Notify("Gagal", "Pilih profile dari dropdown.", "warning"); return end
+            self:DeleteProfile(s)
+        end)
+
+        SettingsTab:AddButton("Refresh Daftar", 10723344432, function()
+            self:RefreshSaveProfiles()
+            self:Notify("Profile", "Daftar diperbarui.", "success")
+        end)
+
+        self:RefreshSaveProfiles()
+        self:ApplyTheme()
+    end)
+
+    return self
+end
+
+-- ─────────────────────────────────────────
+--  NOTIFY
+-- ─────────────────────────────────────────
+function ZyphoraLibrary:Notify(notifTitle, notifText, notifType, duration)
+    local viewTime = duration or 3.5
+    local T = self.Theme
+
+    local typeColors = {
+        success = T.Success,
+        error   = T.Error,
+        warning = T.Warning,
+    }
+    local accentColor = typeColors[notifType] or T.Accent
+
+    local Box = New("Frame", {
+        Name = "ZyphoraNotif",
+        Size = UDim2.new(1,0,0,64),
+        Position = UDim2.new(1,20,0,0),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Parent = self.NotifHolder,
+    })
+    Corner(Box, 10)
+    Stroke(Box, accentColor, 1, 0.2)
+
+    -- Glass shimmer
+    local BoxGrad = New("Frame", {
+        Size = UDim2.new(1,0,0.5,0),
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 0.97,
+        BorderSizePixel = 0,
+        Parent = Box,
+    })
+    Corner(BoxGrad, 10)
+
+    -- Left accent bar
+    local AccBar = New("Frame", {
+        Size = UDim2.new(0,3,1,-16),
+        Position = UDim2.new(0,0,0,8),
+        BackgroundColor3 = accentColor,
+        BorderSizePixel = 0,
+        Parent = Box,
+    })
+    Corner(AccBar, 2)
+
+    -- Icon
+    local NIco = New("ImageLabel", {
+        Size = UDim2.new(0,16,0,16),
+        Position = UDim2.new(0,14,0,14),
+        BackgroundTransparency = 1,
+        Image = ResolveIcon(10734950309) or "",
+        ImageColor3 = accentColor,
+        Parent = Box,
+    })
+
+    New("TextLabel", {
+        Size = UDim2.new(1,-44,0,20),
+        Position = UDim2.new(0,36,0,12),
+        BackgroundTransparency = 1,
+        Text = tostring(notifTitle),
+        TextColor3 = T.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Box,
+    })
+
+    New("TextLabel", {
+        Size = UDim2.new(1,-22,0,20),
+        Position = UDim2.new(0,14,0,34),
+        BackgroundTransparency = 1,
+        Text = tostring(notifText),
+        TextColor3 = T.TextDim,
+        TextSize = 10,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true,
+        Parent = Box,
+    })
+
+    -- Progress bar
+    local ProgBg = New("Frame", {
+        Size = UDim2.new(1,0,0,2),
+        Position = UDim2.new(0,0,1,-2),
+        BackgroundColor3 = T.SurfaceHigh,
+        BorderSizePixel = 0,
+        Parent = Box,
+    })
+    local Prog = New("Frame", {
+        Size = UDim2.new(1,0,1,0),
+        BackgroundColor3 = accentColor,
+        BorderSizePixel = 0,
+        Parent = ProgBg,
+    })
+    Tween(Prog, TI(viewTime, Enum.EasingStyle.Linear), { Size = UDim2.new(0,0,1,0) })
+
+    -- Slide in
+    TSpring(Box, { Position = UDim2.new(0,0,0,0) })
+
+    task.delay(viewTime, function()
+        if not Box or not Box.Parent then return end
+        local tw = TSlow(Box, { Position = UDim2.new(1,20,0,0), BackgroundTransparency = 1 })
+        if tw then
+            tw.Completed:Connect(function() if Box then Box:Destroy() end end)
+        else
+            task.wait(0.3)
+            if Box then Box:Destroy() end
+        end
+    end)
+end
+
+-- ─────────────────────────────────────────
+--  SIDEBAR CATEGORY
+-- ─────────────────────────────────────────
+function ZyphoraLibrary:AddSidebarCategory(categoryName)
+    local T = self.Theme
+    local collapsed = false
+    local linkedTabs = {}
+
+    local Cat = New("TextButton", {
+        Name = "Cat_" .. categoryName,
+        Size = UDim2.new(1,-4,0,22),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = self.Sidebar,
+    })
+
+    local CatLine = New("Frame", {
+        Size = UDim2.new(1,0,0,1),
+        Position = UDim2.new(0,0,0.5,0),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = Cat,
+    })
+
+    local CatChip = New("Frame", {
+        Size = UDim2.new(0,0,1,0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundColor3 = T.BGTertiary,
+        BorderSizePixel = 0,
+        Parent = Cat,
+    })
+    local CatTxt = New("TextLabel", {
+        Size = UDim2.new(0,0,1,0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundTransparency = 1,
+        Text = " " .. string.upper(categoryName) .. " ",
+        TextColor3 = T.TextMuted,
+        TextSize = 8,
+        Font = Enum.Font.GothamBold,
+        Parent = CatChip,
+    })
+
+    local Arrow = New("TextLabel", {
+        Size = UDim2.new(0,14,1,0),
+        Position = UDim2.new(1,-16,0,0),
+        BackgroundTransparency = 1,
+        Text = "▾",
+        TextColor3 = T.TextMuted,
+        TextSize = 9,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = Cat,
+    })
+
+    Cat.MouseButton1Click:Connect(function()
+        collapsed = not collapsed
+        Arrow.Text = collapsed and "▸" or "▾"
+        TFast(Arrow, { TextColor3 = collapsed and T.AccentBright or T.TextMuted })
+        for _, btn in ipairs(linkedTabs) do
+            if btn and btn.Parent then btn.Visible = not collapsed end
+        end
+    end)
+
+    Cat.MouseEnter:Connect(function() TFast(CatTxt, { TextColor3 = T.Text }) end)
+    Cat.MouseLeave:Connect(function() TFast(CatTxt, { TextColor3 = T.TextMuted }) end)
+
+    local catObj = {
+        Instance = Cat,
+        LinkTab = function(_, btn)
+            table.insert(linkedTabs, btn)
+            btn.Visible = not collapsed
+        end
+    }
+    self.Categories[categoryName] = catObj
+    return catObj
+end
+
+-- ─────────────────────────────────────────
+--  CREATE TAB
+-- ─────────────────────────────────────────
+function ZyphoraLibrary:CreateTab(tabName, iconId, isPinned, targetCategory)
+    local T = self.Theme
+    local tab = setmetatable({ Library = self, Elements = {} }, TabClass)
+
+    local TabButton = New("TextButton", {
+        Name = tabName .. "_Tab",
+        BackgroundColor3 = T.Surface,
+        Text = "",
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+    })
+    Corner(TabButton, 7)
+
+    -- Active indicator line (left side)
+    local ActiveLine = New("Frame", {
+        Name = "ActiveLine",
+        Size = UDim2.new(0,3,1,-16),
+        Position = UDim2.new(0,0,0,8),
+        BackgroundColor3 = T.Accent,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 2,
+        Parent = TabButton,
+    })
+    Corner(ActiveLine, 2)
+    tab.ActiveLine = ActiveLine
+
+    if isPinned then
+        TabButton.Size = UDim2.new(0,122,0,30)
+        TabButton.Position = UDim2.new(0,4,1,-36)
+        TabButton.Parent = self.MainFrame
+    else
+        TabButton.Size = UDim2.new(1,-6,0,30)
+        local n = 0
+        for _,c in ipairs(self.Sidebar:GetChildren()) do
+            if c:IsA("Frame") or c:IsA("TextButton") then n=n+1 end
+        end
+        TabButton.LayoutOrder = n + 1
+        TabButton.Parent = self.Sidebar
+        if targetCategory and self.Categories[targetCategory] then
+            self.Categories[targetCategory]:LinkTab(TabButton)
+        end
+    end
+
+    if iconId then
+        local TabIcon = New("ImageLabel", {
+            Name = "TabIcon",
+            Size = UDim2.new(0,14,0,14),
+            Position = UDim2.new(0,12,0.5,-7),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = TabButton,
+        })
+        tab.Icon = TabIcon
+    end
+
+    local TabLabel = New("TextLabel", {
+        Name = "TabLabel",
+        Size = UDim2.new(1, iconId and -34 or -18, 1, 0),
+        Position = UDim2.new(0, iconId and 32 or 10, 0, 0),
+        BackgroundTransparency = 1,
+        Text = tabName,
+        TextColor3 = T.TextDim,
+        TextSize = 11,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = TabButton,
+    })
+    tab.Label = TabLabel
+    tab.Button = TabButton
+
+    local ScrollBox = New("ScrollingFrame", {
+        Name = tabName .. "_Scroll",
+        Size = UDim2.new(1,-4,1,-2),
+        Position = UDim2.new(0,2,0,1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = T.Border,
+        CanvasSize = UDim2.new(0,0,0,0),
+        Visible = false,
+        Parent = self.ContentHolder,
+    })
+    tab.ScrollBox = ScrollBox
+
+    local Layout = New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,5),
+        Parent = ScrollBox,
+    })
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ScrollBox.CanvasSize = UDim2.new(0,0,0, Layout.AbsoluteContentSize.Y + 10)
+    end)
+
+    local function Activate()
+        if not TabButton.Visible then return end
+        for _, t in ipairs(self.Tabs) do
+            if t.ScrollBox then t.ScrollBox.Visible = false end
+            if t.Button then TFast(t.Button, { BackgroundColor3 = T.Surface }) end
+            if t.Label then TFast(t.Label, { TextColor3 = T.TextDim }) end
+            if t.Icon then TFast(t.Icon, { ImageColor3 = T.TextMuted }) end
+            if t.ActiveLine then TFast(t.ActiveLine, { BackgroundTransparency = 1 }) end
+        end
+        ScrollBox.Visible = true
+        TFast(TabButton, { BackgroundColor3 = T.SurfaceHigh })
+        TFast(TabLabel, { TextColor3 = T.AccentBright })
+        if tab.Icon then TFast(tab.Icon, { ImageColor3 = T.AccentBright }) end
+        TFast(ActiveLine, { BackgroundTransparency = 0 })
+        self.CurrentTab = tab
+        self:RefreshCurrentSearch()
+    end
+
+    TabButton.MouseButton1Click:Connect(Activate)
+    TabButton.MouseEnter:Connect(function()
+        if self.CurrentTab ~= tab then TFast(TabButton, { BackgroundColor3 = T.SurfaceHigh }) end
+    end)
+    TabButton.MouseLeave:Connect(function()
+        if self.CurrentTab ~= tab then TFast(TabButton, { BackgroundColor3 = T.Surface }) end
+    end)
+
+    table.insert(self.Tabs, tab)
+    if #self.Tabs == 1 and tabName ~= "Credits" then Activate() end
+    self:ApplyTheme()
+    return tab
+end
+
+-- ─────────────────────────────────────────
+--  ELEMENTS
+-- ─────────────────────────────────────────
+
+-- Section Divider (used in tabs)
+function TabClass:AddSectionDivider(label)
+    local T = self.Library.Theme
+    local Wrap = New("Frame", {
+        Name = "Section_" .. label,
+        Size = UDim2.new(1,-4,0,20),
+        BackgroundTransparency = 1,
+        Parent = self.ScrollBox,
+    })
+    local Line = New("Frame", {
+        Size = UDim2.new(1,0,0,1),
+        Position = UDim2.new(0,0,0.5,0),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = Wrap,
+    })
+    local Chip = New("Frame", {
+        Size = UDim2.new(0,0,1,0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundColor3 = T.BGTertiary,
+        BorderSizePixel = 0,
+        Parent = Wrap,
+    })
+    local Txt = New("TextLabel", {
+        Size = UDim2.new(0,0,1,0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundTransparency = 1,
+        Text = "  " .. string.upper(label) .. "  ",
+        TextColor3 = T.TextMuted,
+        TextSize = 8,
+        Font = Enum.Font.GothamBold,
+        Parent = Chip,
+    })
+    table.insert(self.Library.ControlRegistry, { Kind = "Section", Root = Wrap, Line = Line, Txt = Txt })
+    return Wrap
+end
+
+-- Label
+function TabClass:AddLabel(text, iconId, subtitle, clickable)
+    local T = self.Library.Theme
+    local h = subtitle and 52 or 36
+
+    local El = New("Frame", {
+        Name = text .. "_Label",
+        Size = UDim2.new(1,-4,0,h),
+        BackgroundColor3 = T.BGSecondary,
+        BorderSizePixel = 0,
+        Parent = self.ScrollBox,
+    })
+    Corner(El, 8)
+    local ElStroke = Stroke(El, T.Border, 1)
+
+    local Icon = nil
+    if iconId then
+        Icon = New("ImageLabel", {
+            Name = "Icon",
+            Size = UDim2.new(0,14,0,14),
+            Position = UDim2.new(0,10,0, subtitle and 10 or 11),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = El,
+        })
+    end
+
+    local xOff = iconId and 30 or 12
+    local Title = New("TextLabel", {
+        Name = "LabelTitle",
+        Size = UDim2.new(1, -xOff-12, 0, subtitle and 20 or h),
+        Position = UDim2.new(0, xOff, 0, subtitle and 6 or 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = El,
+    })
+
+    local Sub = nil
+    if subtitle then
+        Sub = New("TextLabel", {
+            Name = "Sub",
+            Size = UDim2.new(1, -xOff-12, 0,16),
+            Position = UDim2.new(0, xOff, 0,28),
+            BackgroundTransparency = 1,
+            Text = subtitle,
+            TextColor3 = T.TextMuted,
+            TextSize = 10,
+            Font = Enum.Font.GothamMedium,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = El,
+        })
+    end
+
+    table.insert(self.Library.ControlRegistry, { Kind = "Label", Root = El, RootStroke = ElStroke, Title = Title, Sub = Sub, Icon = Icon })
+    table.insert(self.Elements, { Name = text, Instance = El })
+    return El
+end
+
+-- Button
+function TabClass:AddButton(text, iconId, callback)
+    local T   = self.Library.Theme
+    local act = callback or function() end
+
+    local El = New("TextButton", {
+        Name = text .. "_Btn",
+        Size = UDim2.new(1,-4,0,36),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = self.ScrollBox,
+    })
+    Corner(El, 8)
+    local ElStroke = Stroke(El, T.Border, 1)
+
+    local Icon = nil
+    if iconId then
+        Icon = New("ImageLabel", {
+            Size = UDim2.new(0,14,0,14),
+            Position = UDim2.new(0,12,0.5,-7),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = El,
+        })
+    end
+
+    local xOff = iconId and 32 or 12
+    local BtnText = New("TextLabel", {
+        Name = "BtnText",
+        Size = UDim2.new(1, -xOff-30, 1, 0),
+        Position = UDim2.new(0, xOff, 0, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = El,
+    })
+
+    -- Arrow indicator
+    New("TextLabel", {
+        Size = UDim2.new(0,16,1,0),
+        Position = UDim2.new(1,-22,0,0),
+        BackgroundTransparency = 1,
+        Text = "›",
+        TextColor3 = T.TextMuted,
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = El,
+    })
+
+    El.MouseEnter:Connect(function()
+        TFast(El, { BackgroundColor3 = T.SurfaceHigh })
+        TFast(ElStroke, { Color = T.BorderLight })
+    end)
+    El.MouseLeave:Connect(function()
+        TFast(El, { BackgroundColor3 = T.Surface })
+        TFast(ElStroke, { Color = T.Border })
+    end)
+    El.MouseButton1Click:Connect(function()
+        Tween(El, TI(0.06), { BackgroundColor3 = T.Accent })
+        task.wait(0.08)
+        TFast(El, { BackgroundColor3 = T.SurfaceHigh })
+        pcall(act)
+    end)
+
+    table.insert(self.Library.ControlRegistry, { Kind = "Button", Root = El, RootStroke = ElStroke, Title = BtnText, Icon = Icon, BtnText = BtnText })
+    table.insert(self.Elements, { Name = text, Instance = El })
+end
+
+-- Toggle
+function TabClass:AddToggle(text, iconId, defaultState, callback)
+    local T    = self.Library.Theme
+    local state= defaultState or false
+    local act  = callback or function() end
+
+    local El = New("TextButton", {
+        Name = text .. "_Toggle",
+        Size = UDim2.new(1,-4,0,38),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = self.ScrollBox,
+    })
+    Corner(El, 8)
+    local ElStroke = Stroke(El, T.Border, 1)
+
+    local Icon = nil
+    if iconId then
+        Icon = New("ImageLabel", {
+            Size = UDim2.new(0,14,0,14),
+            Position = UDim2.new(0,12,0.5,-7),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = El,
+        })
+    end
+
+    local xOff = iconId and 32 or 12
+    local TText = New("TextLabel", {
+        Name = "TText",
+        Size = UDim2.new(1, -xOff-52, 1, 0),
+        Position = UDim2.new(0, xOff, 0, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = El,
+    })
+
+    -- Toggle pill
+    local Pill = New("Frame", {
+        Name = "Pill",
+        Size = UDim2.new(0,36,0,20),
+        Position = UDim2.new(1,-46,0.5,-10),
+        BackgroundColor3 = T.ToggleOff,
+        BorderSizePixel = 0,
+        Parent = El,
+    })
+    Corner(Pill, 50)
+    Stroke(Pill, T.Border, 1)
+
+    local Knob = New("Frame", {
+        Name = "Knob",
+        Size = UDim2.new(0,14,0,14),
+        Position = UDim2.new(0,3,0.5,-7),
+        BackgroundColor3 = T.TextMuted,
+        BorderSizePixel = 0,
+        Parent = Pill,
+    })
+    Corner(Knob, 50)
+
+    local function UpdateVisual(animate)
+        local targetBg    = state and T.ToggleOn or T.ToggleOff
+        local targetKnob  = state and UDim2.new(1,-17,0.5,-7) or UDim2.new(0,3,0.5,-7)
+        local knobColor   = state and Color3.fromRGB(255,255,255) or T.TextMuted
+        local strokeColor = state and T.Accent or T.Border
+        if animate then
+            TFast(Pill, { BackgroundColor3 = targetBg })
+            TSpring(Knob, { Position = targetKnob })
+            TFast(Knob, { BackgroundColor3 = knobColor })
+            TFast(Stroke(Pill, strokeColor, 1), {})  -- re-apply stroke color
+            -- Pulse the glow on activate
+            if state then
+                Tween(El, TI(0.12), { BackgroundColor3 = T.SurfaceTop })
+                task.wait(0.12)
+                TFast(El, { BackgroundColor3 = T.Surface })
+            end
+        else
+            Pill.BackgroundColor3 = targetBg
+            Knob.Position = targetKnob
+            Knob.BackgroundColor3 = knobColor
+        end
+    end
+
+    UpdateVisual(false)
+
+    El.MouseEnter:Connect(function()
+        TFast(El, { BackgroundColor3 = T.SurfaceHigh })
+        TFast(ElStroke, { Color = T.BorderLight })
+    end)
+    El.MouseLeave:Connect(function()
+        TFast(El, { BackgroundColor3 = T.Surface })
+        TFast(ElStroke, { Color = T.Border })
+    end)
+    El.MouseButton1Click:Connect(function()
+        state = not state
+        self.Library.ToggleStates[text] = state
+        UpdateVisual(true)
+        pcall(act, state)
+    end)
+
+    self.Library.ToggleStates[text] = state
+    self.Library.ToggleRegistry[text] = {
+        SetState = function(newState, fire)
+            state = newState and true or false
+            self.Library.ToggleStates[text] = state
+            UpdateVisual(true)
+            if fire then pcall(act, state) end
+        end
+    }
+
+    table.insert(self.Library.ControlRegistry, { Kind = "Toggle", Root = El, RootStroke = ElStroke, Title = TText, Icon = Icon, TText = TText })
+    table.insert(self.Elements, { Name = text, Instance = El })
+
+    return {
+        GetValue = function() return state end,
+        SetValue = function(v, fire)
+            state = v and true or false
+            self.Library.ToggleStates[text] = state
+            UpdateVisual(true)
+            if fire then pcall(act, state) end
+        end
+    }
+end
+
+-- Input
+function TabClass:AddInput(text, iconId, placeholder, callback)
+    local T   = self.Library.Theme
+    local act = callback or function() end
+
+    local El = New("Frame", {
+        Name = text .. "_Input",
+        Size = UDim2.new(1,-4,0,44),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        Parent = self.ScrollBox,
+    })
+    Corner(El, 8)
+    local ElStroke = Stroke(El, T.Border, 1)
+
+    local Icon = nil
+    if iconId then
+        Icon = New("ImageLabel", {
+            Size = UDim2.new(0,13,0,13),
+            Position = UDim2.new(0,11,0,9),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = El,
+        })
+    end
+
+    local xOff = iconId and 30 or 12
+    local Title = New("TextLabel", {
+        Size = UDim2.new(1,-xOff-12,0,16),
+        Position = UDim2.new(0,xOff,0,6),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 10,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = El,
+    })
+
+    local Box = New("TextBox", {
+        Name = "InputBox",
+        Size = UDim2.new(1,-xOff-12,0,16),
+        Position = UDim2.new(0,xOff,0,24),
+        BackgroundTransparency = 1,
+        Text = "",
+        PlaceholderText = tostring(placeholder or ""),
+        PlaceholderColor3 = T.TextMuted,
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        Parent = El,
+    })
+
+    -- Underline for input box
+    local Underline = New("Frame", {
+        Size = UDim2.new(1,-xOff-12,0,1),
+        Position = UDim2.new(0,xOff,1,-5),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = El,
+    })
+
+    Box.Focused:Connect(function()
+        TFast(ElStroke, { Color = T.Accent })
+        TFast(Underline, { BackgroundColor3 = T.Accent })
+    end)
+    Box.FocusLost:Connect(function(enter)
+        TFast(ElStroke, { Color = T.Border })
+        TFast(Underline, { BackgroundColor3 = T.Border })
+        pcall(act, Box.Text, enter)
+    end)
+
+    table.insert(self.Library.ControlRegistry, { Kind = "Input", Root = El, RootStroke = ElStroke, Title = Title, Icon = Icon, Box = Box })
+    table.insert(self.Elements, { Name = text, Instance = El })
+
+    return {
+        Box = Box,
+        GetValue = function() return Box.Text end,
+        SetValue = function(v) Box.Text = tostring(v or "") end,
+    }
+end
+
+-- Slider
+function TabClass:AddSlider(text, iconId, min, max, default, callback)
+    local T   = self.Library.Theme
+    local val = default or min
+    local act = callback or function() end
+
+    local El = New("Frame", {
+        Name = text .. "_Slider",
+        Size = UDim2.new(1,-4,0,54),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        Parent = self.ScrollBox,
+    })
+    Corner(El, 8)
+    local ElStroke = Stroke(El, T.Border, 1)
+
+    local Label = New("TextLabel", {
+        Size = UDim2.new(1,-60,0,18),
+        Position = UDim2.new(0,12,0,7),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = El,
+    })
+
+    local ValLbl = New("TextLabel", {
+        Size = UDim2.new(0,50,0,18),
+        Position = UDim2.new(1,-58,0,7),
+        BackgroundTransparency = 1,
+        Text = tostring(val),
+        TextColor3 = T.AccentBright,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Parent = El,
+    })
+
+    local Track = New("Frame", {
+        Name = "Track",
+        Size = UDim2.new(1,-24,0,6),
+        Position = UDim2.new(0,12,0,34),
+        BackgroundColor3 = T.SurfaceHigh,
+        BorderSizePixel = 0,
+        Parent = El,
+    })
+    Corner(Track, 3)
+
+    local Fill = New("Frame", {
+        Size = UDim2.new((val-min)/(max-min),0,1,0),
+        BackgroundColor3 = T.Accent,
+        BorderSizePixel = 0,
+        Parent = Track,
+    })
+    Corner(Fill, 3)
+
+    -- Thumb
+    local Thumb = New("Frame", {
+        Name = "Thumb",
+        Size = UDim2.new(0,14,0,14),
+        Position = UDim2.new((val-min)/(max-min),0,0.5,-7),
+        AnchorPoint = Vector2.new(0.5,0),
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BorderSizePixel = 0,
+        Parent = Track,
+    })
+    Corner(Thumb, 50)
+    Stroke(Thumb, T.Accent, 2)
+
+    local HitBox = New("TextButton", {
+        Size = UDim2.new(1,0,1,24),
+        Position = UDim2.new(0,0,0,-12),
+        BackgroundTransparency = 1,
+        Text = "",
+        ZIndex = 5,
+        Parent = Track,
+    })
+
+    local dragging = false
+
+    local function Update(x)
+        local abs = Track.AbsolutePosition.X
+        local sz  = Track.AbsoluteSize.X
+        if sz <= 0 then return end
+        local pct = math.clamp((x-abs)/sz, 0, 1)
+        val = math.floor(min + (max-min)*pct + 0.5)
+        TFast(Fill, { Size = UDim2.new(pct,0,1,0) })
+        Thumb.Position = UDim2.new(pct,0,0.5,-7)
+        ValLbl.Text = tostring(val)
+        pcall(act, val)
+    end
+
+    HitBox.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; Update(inp.Position.X)
+        end
+    end)
+    HitBox.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+            Update(inp.Position.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then dragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(inp)
+        if not dragging then return end
+        if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then Update(inp.Position.X) end
+    end)
+
+    El.MouseEnter:Connect(function() TFast(ElStroke, { Color = T.BorderLight }) end)
+    El.MouseLeave:Connect(function() TFast(ElStroke, { Color = T.Border }) end)
+
+    table.insert(self.Library.ControlRegistry, { Kind = "Slider", Root = El, RootStroke = ElStroke, Title = Label, Track = Track })
+    table.insert(self.Elements, { Name = text, Instance = El })
+
+    return {
+        GetValue = function() return val end,
+        SetValue = function(v)
+            val = math.clamp(v, min, max)
+            local pct = (val-min)/(max-min)
+            Fill.Size = UDim2.new(pct,0,1,0)
+            Thumb.Position = UDim2.new(pct,0,0.5,-7)
+            ValLbl.Text = tostring(val)
+        end
+    }
+end
+
+-- Textbox alias
+function TabClass:AddTextbox(text, iconId, placeholder, callback)
+    return self:AddInput(text, iconId, placeholder, callback)
+end
+
+-- Dropdown
+function TabClass:AddDropdown(text, iconId, options, defaultValue, callback)
+    local T      = self.Library.Theme
+    local act    = callback or function() end
+    local open   = false
+    local list   = options or {}
+    local sel    = defaultValue or (list[1] or "None")
+
+    local Root = New("TextButton", {
+        Name = text .. "_Dropdown",
+        Size = UDim2.new(1,-4,0,40),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = self.ScrollBox,
+    })
+    Corner(Root, 8)
+    local RootStroke = Stroke(Root, T.Border, 1)
+
+    local Icon = nil
+    if iconId then
+        Icon = New("ImageLabel", {
+            Size = UDim2.new(0,13,0,13),
+            Position = UDim2.new(0,11,0,12),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = Root,
+        })
+    end
+
+    local xOff = iconId and 30 or 12
+    local Lbl = New("TextLabel", {
+        Size = UDim2.new(1,-xOff-30,0,16),
+        Position = UDim2.new(0,xOff,0,4),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Root,
+    })
+
+    local ValLbl = New("TextLabel", {
+        Name = "ValLbl",
+        Size = UDim2.new(1,-xOff-30,0,14),
+        Position = UDim2.new(0,xOff,0,21),
+        BackgroundTransparency = 1,
+        Text = tostring(sel),
+        TextColor3 = T.TextDim,
+        TextSize = 10,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Root,
+    })
+
+    local ArrowLbl = New("TextLabel", {
+        Size = UDim2.new(0,20,0,20),
+        Position = UDim2.new(1,-26,0,10),
+        BackgroundTransparency = 1,
+        Text = "▾",
+        TextColor3 = T.TextMuted,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = Root,
+    })
+
+    -- Separator line in dropdown
+    local Sep = New("Frame", {
+        Size = UDim2.new(1,-24,0,1),
+        Position = UDim2.new(0,12,0,39),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = Root,
+    })
+
+    -- Options container
+    local OptHolder = New("Frame", {
+        Size = UDim2.new(1,0,0,0),
+        Position = UDim2.new(0,0,0,40),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Parent = Root,
+    })
+
+    local OptScroll = New("ScrollingFrame", {
+        Size = UDim2.new(1,-8,1,0),
+        Position = UDim2.new(0,4,0,0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = T.Border,
+        CanvasSize = UDim2.new(0,0,0,0),
+        Parent = OptHolder,
+    })
+
+    local OptLayout = New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,3),
+        Parent = OptScroll,
+    })
+
+    local function SetValue(v, fire)
+        sel = tostring(v); ValLbl.Text = sel
+        if fire then pcall(act, sel) end
+    end
+
+    local function Rebuild()
+        for _, c in ipairs(OptScroll:GetChildren()) do
+            if c:IsA("TextButton") then c:Destroy() end
+        end
+        for i, opt in ipairs(list) do
+            local isSel = tostring(opt) == sel
+            local Btn = New("TextButton", {
+                Name = "Opt" .. i,
+                Size = UDim2.new(1,0,0,26),
+                BackgroundColor3 = isSel and T.SurfaceTop or T.SurfaceHigh,
+                Text = "",
+                BorderSizePixel = 0,
+                Parent = OptScroll,
+            })
+            Corner(Btn, 5)
+            if isSel then Stroke(Btn, T.Accent, 1) end
+
+            New("TextLabel", {
+                Size = UDim2.new(1,-14,1,0),
+                Position = UDim2.new(0,8,0,0),
+                BackgroundTransparency = 1,
+                Text = tostring(opt),
+                TextColor3 = isSel and T.AccentBright or T.Text,
+                TextSize = 11,
+                Font = isSel and Enum.Font.GothamBold or Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = Btn,
+            })
+
+            if isSel then
+                New("TextLabel", {
+                    Size = UDim2.new(0,14,1,0),
+                    Position = UDim2.new(1,-16,0,0),
+                    BackgroundTransparency = 1,
+                    Text = "✓",
+                    TextColor3 = T.AccentBright,
+                    TextSize = 10,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    Parent = Btn,
+                })
+            end
+
+            Btn.MouseEnter:Connect(function() TFast(Btn, { BackgroundColor3 = T.SurfaceTop }) end)
+            Btn.MouseLeave:Connect(function() TFast(Btn, { BackgroundColor3 = isSel and T.SurfaceTop or T.SurfaceHigh }) end)
+            Btn.MouseButton1Click:Connect(function()
+                SetValue(opt, true)
+                open = false
+                TFast(Root, { Size = UDim2.new(1,-4,0,40) })
+                TFast(OptHolder, { Size = UDim2.new(1,0,0,0) })
+                TFast(Sep, { BackgroundTransparency = 0 })
+                ArrowLbl.Text = "▾"
+                Rebuild()
+            end)
+        end
+        local h = math.min(OptLayout.AbsoluteContentSize.Y + 4, 115)
+        OptScroll.CanvasSize = UDim2.new(0,0,0, OptLayout.AbsoluteContentSize.Y + 4)
+        return h
+    end
+
+    Root.MouseButton1Click:Connect(function()
+        open = not open
+        if open then
+            local h = Rebuild()
+            TSpring(OptHolder, { Size = UDim2.new(1,0,0,h) })
+            TSpring(Root, { Size = UDim2.new(1,-4,0,40+h+6) })
+            TFast(RootStroke, { Color = T.Accent })
+            ArrowLbl.Text = "▴"
+        else
+            TFast(OptHolder, { Size = UDim2.new(1,0,0,0) })
+            TFast(Root, { Size = UDim2.new(1,-4,0,40) })
+            TFast(RootStroke, { Color = T.Border })
+            ArrowLbl.Text = "▾"
+        end
+    end)
+
+    SetValue(sel, false)
+
+    table.insert(self.Library.ControlRegistry, { Kind = "Dropdown", Root = Root, RootStroke = RootStroke, Title = Lbl, Icon = Icon, ValLabel = ValLbl })
+    table.insert(self.Elements, { Name = text, Instance = Root })
+
+    local api = {}
+    function api:GetValue() return sel end
+    function api:SetValue(v, fire) SetValue(v, fire) end
+    function api:SetOptions(newOpts, newDef, fireDef)
+        list = newOpts or {}
+        if newDef ~= nil then SetValue(newDef, fireDef) end
+        if open then Rebuild() end
+    end
+    return api
+end
+
+return ZyphoraLibrary
