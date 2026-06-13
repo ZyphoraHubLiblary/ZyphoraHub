@@ -22,7 +22,7 @@
 -- ║  BACKGROUND   : CUSTOM LINK SUPPORT                        ║
 -- ║                                                              ║
 -- ╠══════════════════════════════════════════════════════════════╣
--- ║                  POWERED BY ZYPHORA SYSTEM                 ║
+-- ║                  POWERED BY ZYPHORA SYSTEM.                 ║
 -- ╚══════════════════════════════════════════════════════════════╝
 
 --[[
@@ -2551,167 +2551,157 @@ end
 
 
     -- ════════════════════════════════════════════════════════════
-    -- 5. TOOLTIP HELPER
-    -- ════════════════════════════════════════════════════════════
-    -- Dipanggil manual: Extras.AddTooltip(library, instanceUI, "Teks tooltip")
-    function Extras.AddTooltip(library, target, text)
-        local T = library.Theme
-        local Tip = New("Frame", {
-            Name = "TooltipBox",
-            Size = UDim2.new(0,0,0,24),
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundColor3 = T.SurfaceTop,
-            BorderSizePixel = 0,
-            Visible = false,
-            ZIndex = 50,
-            Parent = library.ScreenGui,
-        })
-        Corner(Tip, 6)
-        Stroke(Tip, T.Accent, 1)
-        local Pad = New("UIPadding", {
-            PaddingLeft = UDim.new(0,8), PaddingRight = UDim.new(0,8),
-            Parent = Tip,
-        })
-        local Txt = New("TextLabel", {
-            Size = UDim2.new(0,0,1,0),
-            AutomaticSize = Enum.AutomaticSize.X,
+-- 5. EXTRAS & TOOLTIP HELPER
+-- ════════════════════════════════════════════════════════════
+local Extras = {} -- [FIXED] Deklarasi Extras agar tidak nil
+
+function Extras.AddTooltip(library, target, text)
+    local T = library.Theme
+    local Tip = New("Frame", {
+        Name = "TooltipBox",
+        Size = UDim2.new(0,0,0,24),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundColor3 = T.SurfaceTop,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 50,
+        Parent = library.ScreenGui,
+    })
+    Corner(Tip, 6)
+    Stroke(Tip, T.Accent, 1)
+    
+    local PadInst = New("UIPadding", {
+        PaddingLeft = UDim.new(0,8), PaddingRight = UDim.new(0,8),
+        Parent = Tip,
+    })
+    
+    local Txt = New("TextLabel", {
+        Size = UDim2.new(0,0,1,0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 10,
+        Font = Enum.Font.GothamMedium,
+        ZIndex = 51,
+        Parent = Tip,
+    })
+
+    target.MouseEnter:Connect(function()
+        local pos = target.AbsolutePosition
+        local size = target.AbsoluteSize
+        Tip.Position = UDim2.new(0, pos.X + size.X/2, 0, pos.Y - 28)
+        Tip.AnchorPoint = Vector2.new(0.5, 0)
+        Tip.Visible = true
+        Tip.BackgroundTransparency = 1
+        Txt.TextTransparency = 1
+        TFast(Tip, { BackgroundTransparency = 0 })
+        TFast(Txt, { TextTransparency = 0 })
+    end)
+    
+    target.MouseLeave:Connect(function()
+        TFast(Tip, { BackgroundTransparency = 1 })
+        TFast(Txt, { TextTransparency = 1 })
+        task.delay(0.16, function() if Tip then Tip.Visible = false end end)
+    end)
+
+    return Tip
+end
+
+
+-- ════════════════════════════════════════════════════════════
+-- 1. KEYBIND IMPLEMENTATION [FIXED & COMPLETED]
+-- ════════════════════════════════════════════════════════════
+function TabClass:AddKeybind(text, iconId, defaultKey, callback)
+    local T   = self.Library.Theme
+    local act = callback or function() end
+    local currentKey = defaultKey or Enum.KeyCode.Unknown
+    local listening = false
+
+    local El = New("Frame", {
+        Name = text .. "_Keybind",
+        Size = UDim2.new(1,-4,0,38),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        Parent = self.ScrollBox,
+    })
+    Corner(El, 8)
+    local ElStroke = Stroke(El, T.Border, 1)
+
+    local Icon = nil
+    if iconId then
+        Icon = New("ImageLabel", {
+            Size = UDim2.new(0,14,0,14),
+            Position = UDim2.new(0,12,0.5,-7),
             BackgroundTransparency = 1,
-            Text = text,
-            TextColor3 = T.Text,
-            TextSize = 10,
-            Font = Enum.Font.GothamMedium,
-            ZIndex = 51,
-            Parent = Tip,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = El,
         })
-
-        target.MouseEnter:Connect(function()
-            local pos = target.AbsolutePosition
-            local size = target.AbsoluteSize
-            Tip.Position = UDim2.new(0, pos.X + size.X/2, 0, pos.Y - 28)
-            Tip.AnchorPoint = Vector2.new(0.5, 0)
-            Tip.Visible = true
-            Tip.BackgroundTransparency = 1
-            Txt.TextTransparency = 1
-            TFast(Tip, { BackgroundTransparency = 0 })
-            TFast(Txt, { TextTransparency = 0 })
-        end)
-        target.MouseLeave:Connect(function()
-            TFast(Tip, { BackgroundTransparency = 1 })
-            TFast(Txt, { TextTransparency = 1 })
-            task.delay(0.16, function() if Tip then Tip.Visible = false end end)
-        end)
-
-        return Tip
     end
 
+    local xOff = iconId and 32 or 12
+    local Label = New("TextLabel", {
+        Size = UDim2.new(1,-xOff-90,1,0),
+        Position = UDim2.new(0,xOff,0,0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = El,
+    })
 
-    -- ════════════════════════════════════════════════════════════
-    -- 1. KEYBIND
-    -- ════════════════════════════════════════════════════════════
-    function TabClass:AddKeybind(text, iconId, defaultKey, callback)
-        local T   = self.Library.Theme
-        local act = callback or function() end
-        local currentKey = defaultKey or Enum.KeyCode.Unknown
-        local listening = false
+    -- Bind Button Frame
+    local BindBtn = New("TextButton", {
+        Size = UDim2.new(0,70,0,22),
+        Position = UDim2.new(1,-82,0.5,-11),
+        BackgroundColor3 = T.SurfaceHigh,
+        Text = currentKey.Name,
+        TextColor3 = T.TextDim,
+        TextSize = 10,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = El,
+    })
+    Corner(BindBtn, 5)
+    local BindStroke = Stroke(BindBtn, T.Border, 1)
 
-        local El = New("Frame", {
-            Name = text .. "_Keybind",
-            Size = UDim2.new(1,-4,0,38),
-            BackgroundColor3 = T.Surface,
-            BorderSizePixel = 0,
-            Parent = self.ScrollBox,
-        })
-        Corner(El, 8)
-        local ElStroke = Stroke(El, T.Border, 1)
+    BindBtn.MouseButton1Click:Connect(function()
+        listening = true
+        BindBtn.Text = "..."
+        TFast(BindStroke, { Color = T.Accent })
+    end)
 
-        local Icon = nil
-        if iconId then
-            local function ResolveIcon(icon)
-                if typeof(icon) == "number" then return "rbxassetid://" .. tostring(icon) end
-                return icon
-            end
-            Icon = New("ImageLabel", {
-                Size = UDim2.new(0,14,0,14),
-                Position = UDim2.new(0,12,0.5,-7),
-                BackgroundTransparency = 1,
-                Image = ResolveIcon(iconId) or "",
-                ImageColor3 = T.TextMuted,
-                Parent = El,
-            })
-        end
-
-        local xOff = iconId and 32 or 12
-        local Label = New("TextLabel", {
-            Size = UDim2.new(1,-xOff-90,1,0),
-            Position = UDim2.new(0,xOff,0,0),
-            BackgroundTransparency = 1,
-            Text = text,
-            TextColor3 = T.Text,
-            TextSize = 12,
-            Font = Enum.Font.GothamMedium,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Parent = El,
-        })
-
-        local KeyBtn = New("TextButton", {
-            Name = "KeyBtn",
-            Size = UDim2.new(0,76,0,26),
-            Position = UDim2.new(1,-86,0.5,-13),
-            BackgroundColor3 = T.SurfaceHigh,
-            Text = currentKey == Enum.KeyCode.Unknown and "..." or currentKey.Name,
-            TextColor3 = T.AccentBright,
-            TextSize = 11,
-            Font = Enum.Font.GothamBold,
-            BorderSizePixel = 0,
-            Parent = El,
-        })
-        Corner(KeyBtn, 6)
-        local KeyStroke = Stroke(KeyBtn, T.Accent, 1)
-
-        KeyBtn.MouseButton1Click:Connect(function()
-            if listening then return end
-            listening = true
-            KeyBtn.Text = "..."
-            TFast(KeyStroke, { Color = T.Warning })
-        end)
-
-        local conn1, conn2
-        conn1 = UserInputService.InputBegan:Connect(function(input, processed)
-            if not listening then return end
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if listening then
             if input.UserInputType == Enum.UserInputType.Keyboard then
-                currentKey = input.KeyCode
-                KeyBtn.Text = currentKey.Name
                 listening = false
-                TFast(KeyStroke, { Color = T.Accent })
+                currentKey = input.KeyCode
+                BindBtn.Text = currentKey.Name
+                TFast(BindStroke, { Color = T.Border })
             end
-        end)
-        -- Fire callback saat key ditekan (di luar mode listening)
-        conn2 = UserInputService.InputBegan:Connect(function(input, processed)
-            if listening or processed then return end
-            if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == currentKey and currentKey ~= Enum.KeyCode.Unknown then
-                pcall(act, currentKey)
+        else
+            if input.KeyCode == currentKey then
+                pcall(act)
             end
-        end)
+        end
+    end)
 
-        El.Destroying = El.Destroying or nil -- safety
-        El.AncestryChanged:Connect(function(_, parent)
-            if not parent then
-                if conn1 then conn1:Disconnect() end
-                if conn2 then conn2:Disconnect() end
-            end
-        end)
+    table.insert(self.Library.ControlRegistry, { Kind = "Keybind", Root = El, RootStroke = ElStroke, Title = Label, Icon = Icon })
+    table.insert(self.Elements, { Name = text, Instance = El })
 
-        El.MouseEnter:Connect(function() TFast(ElStroke, { Color = T.BorderLight }) end)
-        El.MouseLeave:Connect(function() TFast(ElStroke, { Color = T.Border }) end)
-
-        table.insert(self.Library.ControlRegistry, { Kind = "Keybind", Root = El, RootStroke = ElStroke, Title = Label, Icon = Icon })
-        table.insert(self.Elements, { Name = text, Instance = El })
-
-        return {
-            GetKey = function() return currentKey end,
-            SetKey = function(k) currentKey = k; KeyBtn.Text = k.Name end,
-        }
-    end
+    return {
+        GetBind = function() return currentKey end,
+        SetBind = function(newKey)
+            currentKey = newKey
+            BindBtn.Text = currentKey.Name
+        end
+    }
+end
 
 
     -- ════════════════════════════════════════════════════════════
