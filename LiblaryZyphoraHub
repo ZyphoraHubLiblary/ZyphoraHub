@@ -37,7 +37,7 @@ local RunService       = game:GetService("RunService")
 -- ─────────────────────────────────────────
 --  ICON SUPPORT
 -- ─────────────────────────────────────────
-local ICON_SUPPORT_URL = "https://raw.githubusercontent.com/ZyphoraHubLiblary/ZyphoraHubIconSupport/refs/heads/main/Icon%20Support"
+local ICON_SUPPORT_URL = "https://raw.githubusercontent.com/ZyphoraHubLibrary/ZyphoraHubIconSupport/refs/heads/main/Icon"
 local IconSupport = {}
 pcall(function() IconSupport = loadstring(game:HttpGet(ICON_SUPPORT_URL))() end)
 
@@ -54,22 +54,6 @@ local function ResolveIcon(icon)
     return nil
 end
 
-local function ResolveBackground(link)
-    if not link or link == "" then
-        return ""
-    end
-
-    if tostring(link):match("^rbxassetid://") then
-        return link
-    end
-
-    if tostring(link):match("^https://") or tostring(link):match("^http://") then
-        return link
-    end
-
-    return "rbxassetid://" .. tostring(link)
-end
-
 -- ─────────────────────────────────────────
 --  UTILITIES
 -- ─────────────────────────────────────────
@@ -82,6 +66,26 @@ local function HexToColor(hex, fallback)
     local r,g,b = tonumber(hex:sub(1,2),16), tonumber(hex:sub(3,4),16), tonumber(hex:sub(5,6),16)
     if not r or not g or not b then return fallback end
     return Color3.fromRGB(r,g,b)
+end
+local function ParseImageLink(input)
+    if typeof(input) ~= "string" then return nil end
+    local s = input:gsub("%s+", "")
+    if s == "" then return nil end
+
+    if s:match("^rbxassetid://%d+$") then return s end
+    if s:match("^%d+$") then return "rbxassetid://" .. s end
+
+    local idFromUrl = s:match("roblox%.com/[^%s]-(%d+)")
+    if idFromUrl then return "rbxassetid://" .. idFromUrl end
+
+    if s:match("^https?://") and s:match("%.%a+$") then
+        return s
+    end
+
+    local anyId = s:match("(%d+)")
+    if anyId then return "rbxassetid://" .. anyId end
+
+    return s
 end
 local function SanitizeName(name)
     name = tostring(name or ""):gsub("[%/%:*%?\"<>|]",""):gsub("%s+",""):gsub("[%+%^%$]","")
@@ -155,10 +159,10 @@ local DEFAULT_THEME = {
     BorderLight = Color3.fromRGB(55,  52,  85),
 
     -- Accent
-Accent      = Color3.fromRGB(255, 60, 60),
-AccentBright= Color3.fromRGB(80, 160, 255),
-AccentDim   = Color3.fromRGB(180, 40, 40),
-AccentGlow  = Color3.fromRGB(0, 120, 255),
+    Accent      = Color3.fromRGB(108,  59, 255),
+    AccentBright= Color3.fromRGB(155, 110, 255),
+    AccentDim   = Color3.fromRGB(75,   42, 180),
+    AccentGlow  = Color3.fromRGB(108,  59, 255),
 
     -- Text
     Text        = Color3.fromRGB(240, 238, 252),
@@ -381,29 +385,39 @@ function ZyphoraLibrary.new(_, title)
     Corner(MainFrame, 12)
     local MainStroke = Stroke(MainFrame, T.Border, 1.2, 0)
     self.MainFrame = MainFrame
-    local CustomBackground = New("ImageLabel", {
-    Name = "CustomBackground",
-    Size = UDim2.new(1,0,1,0),
-    BackgroundTransparency = 1,
-    Image = ResolveBackground("https://i.imgur.com/YOURIMAGE.png"),
-    ScaleType = Enum.ScaleType.Crop,
-    ImageTransparency = 0.35,
-    ZIndex = -1,
-    Parent = MainFrame,
-})
-
-Corner(CustomBackground, 12)
-
-local BgGradient = New("UIGradient", {
-    Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,40,40)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(40,120,255))
-    },
-    Rotation = 45,
-    Parent = CustomBackground
-})
     self._uiRefs.MainFrame = MainFrame
     self._uiRefs.MainStroke = MainStroke
+
+    -- Custom Background Image (mendukung semua link gambar / asset id)
+    local BgImage = New("ImageLabel", {
+        Name = "CustomBackground",
+        Size = UDim2.new(1,0,1,0),
+        Position = UDim2.new(0,0,0,0),
+        BackgroundTransparency = 1,
+        Image = "",
+        ImageTransparency = 0.35,
+        ScaleType = Enum.ScaleType.Crop,
+        ZIndex = 0,
+        Visible = false,
+        Parent = MainFrame,
+    })
+    Corner(BgImage, 12)
+    self._uiRefs.CustomBackground = BgImage
+
+    -- Gradient overlay (Merah -> Biru)
+    local BgGradientOverlay = New("Frame", {
+        Name = "CustomBackgroundGradient",
+        Size = UDim2.new(1,0,1,0),
+        Position = UDim2.new(0,0,0,0),
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 0.55,
+        ZIndex = 0,
+        Visible = false,
+        Parent = MainFrame,
+    })
+    Corner(BgGradientOverlay, 12)
+    Gradient(BgGradientOverlay, { Color3.fromRGB(255, 40, 60), Color3.fromRGB(40, 90, 255) }, 45)
+    self._uiRefs.CustomBackgroundGradient = BgGradientOverlay
 
     -- Subtle inner glow overlay on main frame
     local FrameGlow = New("ImageLabel", {
@@ -630,10 +644,7 @@ local BgGradient = New("UIGradient", {
         Parent = TopBar,
     })
     Corner(TopGrad, 12)
-    Gradient(TopGrad, {
-    Color3.fromRGB(255,40,40),
-    Color3.fromRGB(40,80,255)
-}, 90)
+    Gradient(TopGrad, { Color3.fromRGB(25,20,45), T.BGSecondary }, 90)
 
     self.TopBar = TopBar
     self._uiRefs.TopBar = TopBar
@@ -865,10 +876,10 @@ local BgGradient = New("UIGradient", {
         Stroke(Hero, T.Border, 1)
 
         Gradient(Hero, {
-    Color3.fromRGB(255,50,50),
-    Color3.fromRGB(80,120,255),
-    Color3.fromRGB(10,8,20),
-}, 115)
+            Color3.fromRGB(60,30,130),
+            Color3.fromRGB(20,16,48),
+            Color3.fromRGB(10,8,20),
+        }, 115)
 
         -- Accent line
         local HeroAccent = New("Frame", {
@@ -1343,6 +1354,37 @@ local BgGradient = New("UIGradient", {
             if self.SettingsRefs.AccentBox then self.SettingsRefs.AccentBox.Text = "#6C3BFF" end
             if self.SettingsRefs.BackgroundBox then self.SettingsRefs.BackgroundBox.Text = "#08080E" end
             self:Notify("Tema", "Dikembalikan ke Default.", "success")
+        end)
+
+        SettingsTab:AddSectionDivider("Custom Background")
+        local bgLinkInput = SettingsTab:AddInput("Link/ID Background (semua link didukung)", 10723344432, "", function() end)
+        SettingsTab:AddButton("Terapkan Background", 10723344432, function()
+            local link = bgLinkInput:GetValue()
+            local img = ParseImageLink(link)
+            if not img or img == "" then
+                if self._uiRefs.CustomBackground then self._uiRefs.CustomBackground.Visible = false end
+                self:Notify("Background", "Background custom dihapus.", "info")
+                return
+            end
+            if self._uiRefs.CustomBackground then
+                self._uiRefs.CustomBackground.Image = img
+                self._uiRefs.CustomBackground.Visible = true
+            end
+            self:Notify("Background", "Background custom diterapkan.", "success")
+        end)
+
+        local gradToggle = SettingsTab:AddToggle("Gradasi Merah ke Biru", 10723344432, false, function(state)
+            if self._uiRefs.CustomBackgroundGradient then
+                self._uiRefs.CustomBackgroundGradient.Visible = state
+            end
+        end)
+
+        SettingsTab:AddButton("Hapus Background", 10723344432, function()
+            bgLinkInput.Box.Text = ""
+            if self._uiRefs.CustomBackground then self._uiRefs.CustomBackground.Visible = false end
+            if self._uiRefs.CustomBackgroundGradient then self._uiRefs.CustomBackgroundGradient.Visible = false end
+            if gradToggle and gradToggle.SetValue then gradToggle:SetValue(false) end
+            self:Notify("Background", "Background direset.", "success")
         end)
 
         SettingsTab:AddSectionDivider("Profile Manager")
