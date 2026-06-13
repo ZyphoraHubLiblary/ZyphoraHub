@@ -21,6 +21,10 @@
     ================================================================
 ]]
 
+if setclipboard then
+    setclipboard("https://whatsapp.com/channel/0029Vb8PZy4HwXbBtQmAJ73m")
+end
+
 local ZyphoraLibrary = {}
 ZyphoraLibrary.__index = ZyphoraLibrary
 
@@ -2509,6 +2513,541 @@ function TabClass:AddDropdown(text, iconId, options, defaultValue, callback)
         if open then Rebuild() end
     end
     return api
+end
+
+-- Multi Dropdown
+function TabClass:AddMultiDropdown(text, iconId, options, defaultValues, callback)
+    local T      = self.Library.Theme
+    local act    = callback or function() end
+    local open   = false
+    local list   = options or {}
+    local chosen = {}
+
+    -- Set default values
+    if defaultValues then
+        for _, v in ipairs(defaultValues) do
+            chosen[tostring(v)] = true
+        end
+    end
+
+    local function GetSelected()
+        local result = {}
+        for _, opt in ipairs(list) do
+            if chosen[tostring(opt)] then
+                table.insert(result, tostring(opt))
+            end
+        end
+        return result
+    end
+
+    local function GetDisplayText()
+        local sel = GetSelected()
+        if #sel == 0 then return "Tidak ada dipilih" end
+        if #sel == 1 then return sel[1] end
+        return sel[1] .. " +" .. (#sel - 1) .. " lainnya"
+    end
+
+    local Root = New("TextButton", {
+        Name = text .. "_MultiDropdown",
+        Size = UDim2.new(1,-4,0,40),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = self.ScrollBox,
+    })
+    Corner(Root, 8)
+    local RootStroke = Stroke(Root, T.Border, 1)
+
+    local Icon = nil
+    if iconId then
+        Icon = New("ImageLabel", {
+            Size = UDim2.new(0,13,0,13),
+            Position = UDim2.new(0,11,0,12),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = Root,
+        })
+    end
+
+    local xOff = iconId and 30 or 12
+
+    local Lbl = New("TextLabel", {
+        Size = UDim2.new(1,-xOff-30,0,16),
+        Position = UDim2.new(0,xOff,0,4),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Root,
+    })
+
+    local ValLbl = New("TextLabel", {
+        Name = "ValLbl",
+        Size = UDim2.new(1,-xOff-30,0,14),
+        Position = UDim2.new(0,xOff,0,21),
+        BackgroundTransparency = 1,
+        Text = GetDisplayText(),
+        TextColor3 = T.TextDim,
+        TextSize = 10,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Root,
+    })
+
+    local ArrowLbl = New("TextLabel", {
+        Size = UDim2.new(0,20,0,20),
+        Position = UDim2.new(1,-26,0,10),
+        BackgroundTransparency = 1,
+        Text = "▾",
+        TextColor3 = T.TextMuted,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = Root,
+    })
+
+    -- Counter badge
+    local CountBadge = New("Frame", {
+        Size = UDim2.new(0,18,0,18),
+        Position = UDim2.new(1,-48,0,11),
+        BackgroundColor3 = T.Accent,
+        BorderSizePixel = 0,
+        Visible = false,
+        Parent = Root,
+    })
+    Corner(CountBadge, 50)
+    local CountLbl = New("TextLabel", {
+        Size = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        Text = "0",
+        TextColor3 = Color3.fromRGB(255,255,255),
+        TextSize = 9,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = CountBadge,
+    })
+
+    local Sep = New("Frame", {
+        Size = UDim2.new(1,-24,0,1),
+        Position = UDim2.new(0,12,0,39),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = Root,
+    })
+
+    local OptHolder = New("Frame", {
+        Size = UDim2.new(1,0,0,0),
+        Position = UDim2.new(0,0,0,40),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Parent = Root,
+    })
+
+    local OptScroll = New("ScrollingFrame", {
+        Size = UDim2.new(1,-8,1,0),
+        Position = UDim2.new(0,4,0,0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = T.Border,
+        CanvasSize = UDim2.new(0,0,0,0),
+        Parent = OptHolder,
+    })
+
+    local OptLayout = New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,3),
+        Parent = OptScroll,
+    })
+
+    -- Select All / Clear Row
+    local CtrlRow = New("Frame", {
+        Size = UDim2.new(1,-8,0,22),
+        BackgroundTransparency = 1,
+        Parent = OptScroll,
+    })
+    New("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0,4),
+        Parent = CtrlRow,
+    })
+
+    local function UpdateBadge()
+        local sel = GetSelected()
+        local count = #sel
+        if count > 0 then
+            CountBadge.Visible = true
+            CountLbl.Text = tostring(count)
+        else
+            CountBadge.Visible = false
+        end
+        ValLbl.Text = GetDisplayText()
+    end
+
+    local function Rebuild()
+        for _, c in ipairs(OptScroll:GetChildren()) do
+            if c:IsA("TextButton") or (c:IsA("Frame") and c.Name ~= "CtrlRow") then
+                c:Destroy()
+            end
+        end
+
+        -- Select All button
+        local SelAll = New("TextButton", {
+            Size = UDim2.new(0.5,-2,1,0),
+            BackgroundColor3 = T.SurfaceHigh,
+            Text = "Pilih Semua",
+            TextColor3 = T.AccentBright,
+            TextSize = 9,
+            Font = Enum.Font.GothamBold,
+            BorderSizePixel = 0,
+            Parent = CtrlRow,
+        })
+        Corner(SelAll, 5)
+        SelAll.MouseButton1Click:Connect(function()
+            for _, opt in ipairs(list) do chosen[tostring(opt)] = true end
+            UpdateBadge()
+            Rebuild()
+            pcall(act, GetSelected())
+        end)
+
+        -- Clear button
+        local ClearBtn = New("TextButton", {
+            Size = UDim2.new(0.5,-2,1,0),
+            BackgroundColor3 = T.SurfaceHigh,
+            Text = "Hapus Semua",
+            TextColor3 = T.Error,
+            TextSize = 9,
+            Font = Enum.Font.GothamBold,
+            BorderSizePixel = 0,
+            Parent = CtrlRow,
+        })
+        Corner(ClearBtn, 5)
+        ClearBtn.MouseButton1Click:Connect(function()
+            chosen = {}
+            UpdateBadge()
+            Rebuild()
+            pcall(act, GetSelected())
+        end)
+
+        -- Divider
+        New("Frame", {
+            Size = UDim2.new(1,0,0,1),
+            BackgroundColor3 = T.Border,
+            BorderSizePixel = 0,
+            Parent = OptScroll,
+        })
+
+        for i, opt in ipairs(list) do
+            local key    = tostring(opt)
+            local isSel  = chosen[key] == true
+
+            local Row = New("TextButton", {
+                Name = "Opt_" .. i,
+                Size = UDim2.new(1,0,0,28),
+                BackgroundColor3 = isSel and T.SurfaceTop or T.SurfaceHigh,
+                Text = "",
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Parent = OptScroll,
+            })
+            Corner(Row, 5)
+            local RowStroke = Stroke(Row, isSel and T.Accent or T.Border, 1)
+
+            -- Checkbox
+            local CheckBox = New("Frame", {
+                Size = UDim2.new(0,14,0,14),
+                Position = UDim2.new(0,8,0.5,-7),
+                BackgroundColor3 = isSel and T.Accent or T.SurfaceHigh,
+                BorderSizePixel = 0,
+                Parent = Row,
+            })
+            Corner(CheckBox, 4)
+            Stroke(CheckBox, isSel and T.Accent or T.Border, 1)
+
+            if isSel then
+                New("TextLabel", {
+                    Size = UDim2.new(1,0,1,0),
+                    BackgroundTransparency = 1,
+                    Text = "✓",
+                    TextColor3 = Color3.fromRGB(255,255,255),
+                    TextSize = 9,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    Parent = CheckBox,
+                })
+            end
+
+            New("TextLabel", {
+                Size = UDim2.new(1,-36,1,0),
+                Position = UDim2.new(0,28,0,0),
+                BackgroundTransparency = 1,
+                Text = key,
+                TextColor3 = isSel and T.AccentBright or T.Text,
+                TextSize = 11,
+                Font = isSel and Enum.Font.GothamBold or Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = Row,
+            })
+
+            Row.MouseEnter:Connect(function()
+                if not chosen[key] then
+                    TFast(Row, { BackgroundColor3 = T.SurfaceTop })
+                    TFast(RowStroke, { Color = T.BorderLight })
+                end
+            end)
+            Row.MouseLeave:Connect(function()
+                if not chosen[key] then
+                    TFast(Row, { BackgroundColor3 = T.SurfaceHigh })
+                    TFast(RowStroke, { Color = T.Border })
+                end
+            end)
+            Row.MouseButton1Click:Connect(function()
+                chosen[key] = not chosen[key] or nil
+                UpdateBadge()
+                Rebuild()
+                pcall(act, GetSelected())
+            end)
+        end
+
+        local h = math.min(OptLayout.AbsoluteContentSize.Y + 4, 140)
+        OptScroll.CanvasSize = UDim2.new(0,0,0, OptLayout.AbsoluteContentSize.Y + 4)
+        return h
+    end
+
+    Root.MouseButton1Click:Connect(function()
+        open = not open
+        if open then
+            local h = Rebuild()
+            TSpring(OptHolder, { Size = UDim2.new(1,0,0,h) })
+            TSpring(Root, { Size = UDim2.new(1,-4,0,40+h+6) })
+            TFast(RootStroke, { Color = T.Accent })
+            ArrowLbl.Text = "▴"
+        else
+            TFast(OptHolder, { Size = UDim2.new(1,0,0,0) })
+            TFast(Root, { Size = UDim2.new(1,-4,0,40) })
+            TFast(RootStroke, { Color = T.Border })
+            ArrowLbl.Text = "▾"
+        end
+    end)
+
+    UpdateBadge()
+
+    table.insert(self.Library.ControlRegistry, { Kind = "Dropdown", Root = Root, RootStroke = RootStroke, Title = Lbl, Icon = Icon, ValLabel = ValLbl })
+    table.insert(self.Elements, { Name = text, Instance = Root })
+
+    local api = {}
+    function api:GetValue() return GetSelected() end
+    function api:SetValue(tbl, fire)
+        chosen = {}
+        if type(tbl) == "table" then
+            for _, v in ipairs(tbl) do chosen[tostring(v)] = true end
+        end
+        UpdateBadge()
+        if open then Rebuild() end
+        if fire then pcall(act, GetSelected()) end
+    end
+    function api:SetOptions(newOpts, fire)
+        list = newOpts or {}
+        chosen = {}
+        UpdateBadge()
+        if open then Rebuild() end
+        if fire then pcall(act, GetSelected()) end
+    end
+    return api
+end
+
+-- List
+function TabClass:AddList(text, iconId, items, callback)
+    local T   = self.Library.Theme
+    local act = callback or function() end
+    local selected = nil
+
+    local Wrap = New("Frame", {
+        Name = text .. "_List",
+        Size = UDim2.new(1,-4,0,0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        ClipsDescendants = false,
+        Parent = self.ScrollBox,
+    })
+    Corner(Wrap, 8)
+    local WrapStroke = Stroke(Wrap, T.Border, 1)
+
+    -- Header
+    local Header = New("Frame", {
+        Name = "Header",
+        Size = UDim2.new(1,0,0,32),
+        BackgroundTransparency = 1,
+        Parent = Wrap,
+    })
+
+    if iconId then
+        New("ImageLabel", {
+            Size = UDim2.new(0,13,0,13),
+            Position = UDim2.new(0,11,0.5,-6),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = Header,
+        })
+    end
+
+    local xOff = iconId and 30 or 12
+    New("TextLabel", {
+        Size = UDim2.new(1,-xOff-12,1,0),
+        Position = UDim2.new(0,xOff,0,0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Header,
+    })
+
+    -- Divider
+    New("Frame", {
+        Size = UDim2.new(1,-24,0,1),
+        Position = UDim2.new(0,12,0,31),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = Wrap,
+    })
+
+    -- Items Container
+    local ItemsHolder = New("Frame", {
+        Name = "ItemsHolder",
+        Size = UDim2.new(1,0,0,0),
+        Position = UDim2.new(0,0,0,36),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        Parent = Wrap,
+    })
+    New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,2),
+        Parent = ItemsHolder,
+    })
+    New("UIPadding", {
+        PaddingLeft  = UDim.new(0,6),
+        PaddingRight = UDim.new(0,6),
+        PaddingBottom= UDim.new(0,6),
+        Parent = ItemsHolder,
+    })
+
+    local itemRefs = {}
+
+    local function BuildItems()
+        for _, c in ipairs(ItemsHolder:GetChildren()) do
+            if c:IsA("TextButton") or c:IsA("Frame") then c:Destroy() end
+        end
+        itemRefs = {}
+
+        for i, item in ipairs(items or {}) do
+            local isSel = tostring(item) == tostring(selected)
+
+            local Row = New("TextButton", {
+                Name = "Item_" .. i,
+                Size = UDim2.new(1,0,0,28),
+                BackgroundColor3 = isSel and T.SurfaceTop or T.SurfaceHigh,
+                Text = "",
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Parent = ItemsHolder,
+            })
+            Corner(Row, 6)
+            local RowStroke = isSel and Stroke(Row, T.Accent, 1) or Stroke(Row, T.Border, 1)
+
+            -- Left accent dot
+            local Dot = New("Frame", {
+                Size = UDim2.new(0,4,0,4),
+                Position = UDim2.new(0,8,0.5,-2),
+                BackgroundColor3 = isSel and T.Accent or T.TextMuted,
+                BorderSizePixel = 0,
+                Parent = Row,
+            })
+            Corner(Dot, 50)
+
+            New("TextLabel", {
+                Size = UDim2.new(1,-42,1,0),
+                Position = UDim2.new(0,20,0,0),
+                BackgroundTransparency = 1,
+                Text = tostring(item),
+                TextColor3 = isSel and T.AccentBright or T.Text,
+                TextSize = 11,
+                Font = isSel and Enum.Font.GothamBold or Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = Row,
+            })
+
+            -- Checkmark kalau selected
+            if isSel then
+                New("TextLabel", {
+                    Size = UDim2.new(0,16,1,0),
+                    Position = UDim2.new(1,-20,0,0),
+                    BackgroundTransparency = 1,
+                    Text = "✓",
+                    TextColor3 = T.AccentBright,
+                    TextSize = 11,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    Parent = Row,
+                })
+            end
+
+            Row.MouseEnter:Connect(function()
+                if tostring(item) ~= tostring(selected) then
+                    TFast(Row, { BackgroundColor3 = T.SurfaceTop })
+                    TFast(RowStroke, { Color = T.BorderLight })
+                end
+            end)
+            Row.MouseLeave:Connect(function()
+                if tostring(item) ~= tostring(selected) then
+                    TFast(Row, { BackgroundColor3 = T.SurfaceHigh })
+                    TFast(RowStroke, { Color = T.Border })
+                end
+            end)
+            Row.MouseButton1Click:Connect(function()
+                selected = tostring(item)
+                Tween(Row, TI(0.06), { BackgroundColor3 = T.Accent })
+                task.wait(0.08)
+                BuildItems()
+                pcall(act, selected)
+            end)
+
+            table.insert(itemRefs, Row)
+        end
+    end
+
+    BuildItems()
+
+    table.insert(self.Library.ControlRegistry, { Kind = "List", Root = Wrap, RootStroke = WrapStroke })
+    table.insert(self.Elements, { Name = text, Instance = Wrap })
+
+    return {
+        GetValue    = function() return selected end,
+        SetValue    = function(v, fire)
+            selected = tostring(v)
+            BuildItems()
+            if fire then pcall(act, selected) end
+        end,
+        SetItems    = function(newItems, fire)
+            items = newItems or {}
+            selected = nil
+            BuildItems()
+            if fire then pcall(act, selected) end
+        end,
+        ClearSelect = function()
+            selected = nil
+            BuildItems()
+        end,
+    }
 end
 
 return ZyphoraLibrary
