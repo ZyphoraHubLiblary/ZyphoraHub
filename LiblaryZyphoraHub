@@ -6,7 +6,7 @@
 -- ║   ██║  ██║███████╗██╔╝ ██╗███████╗      ║
 -- ║   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝      ║
 -- ╠══════════════════════════════════════════╣
--- ║  LIBRARY  : Zyphora UI                   ║
+-- ║  LIBRARY  : Zyphora UI.                   ║
 -- ║  VERSION  : V3.0                         ║
 -- ║  STATUS   : Private                      ║
 -- ║  OWNER    : Zyphora                      ║
@@ -455,7 +455,7 @@ function ZyphoraLibrary.new(_, title)
     local ToggleBtn = New("TextButton", {
         Name = "ZyphoraToggle",
         Size = UDim2.new(0,46,0,46),
-        Position = UDim2.new(1, -70, 0.5, -23),
+        Position = UDim2.new(0, 16, 0.5, -23),
         BackgroundColor3 = Color3.fromRGB(18,14,32),
         Text = "",
         Active = true,
@@ -886,7 +886,7 @@ local function OpenChatWindow()
         Size = UDim2.new(0, 34, 0, 28),
         Position = UDim2.new(1, -40, 0.5, -14),
         BackgroundColor3 = T.Accent,
-        Text = "➤",
+        Text = ">",
         TextColor3 = Color3.fromRGB(255, 255, 255),
         TextSize = 13,
         Font = Enum.Font.GothamBold,
