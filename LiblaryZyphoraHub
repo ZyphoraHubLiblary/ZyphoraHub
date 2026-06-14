@@ -52,7 +52,7 @@ local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 -- Cek apakah player ada di daftar blacklist
 if Blacklist[LocalPlayer.Name] then
     -- Mengeluarkan player dari game jika terdaftar di blacklist
-    LocalPlayer:Kick("[Zyphora HUB SECURITY]\nKamu telah di-blacklist dari script ini!")
+    LocalPlayer:Kick("[Zyphora HUB SECURITY]\nKamu telah di-blacklist dari script ini! Makanya Jangan Tolol")
     return -- Menghentikan sisa script di bawah agar tidak tereksekusi
 end
 -- =================================================================
@@ -501,9 +501,9 @@ function ZyphoraLibrary.new(_, title)
     -- Icon
     local ToggleIcon = New("ImageLabel", {
         Name = "ToggleIcon",
-        Size = UDim2.new(0,20,0,20),
+        Size = UDim2.new(0,25,0,25),
         BackgroundTransparency = 1,
-        Image = ResolveIcon(109526457219648) or "",
+        Image = ResolveIcon(82539886579242) or "",
         ImageColor3 = T.AccentBright,
         ZIndex = 13,
         Parent = ScreenGui,
@@ -513,7 +513,7 @@ function ZyphoraLibrary.new(_, title)
     local function SyncToggleChildren()
         local pos = ToggleBtn.AbsolutePosition
         ToggleGlow.Position = UDim2.new(0, pos.X-15, 0, pos.Y-15)
-        ToggleIcon.Position = UDim2.new(0, pos.X+13, 0, pos.Y+13)
+        ToggleIcon.Position = UDim2.new(0, pos.X+10, 0, pos.Y+10)
     end
     ToggleBtn:GetPropertyChangedSignal("AbsolutePosition"):Connect(SyncToggleChildren)
     SyncToggleChildren()
