@@ -6,7 +6,7 @@
 -- ║   ██║  ██║███████╗██╔╝ ██╗███████╗      ║
 -- ║   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝      ║
 -- ╠══════════════════════════════════════════╣
--- ║  LIBRARY  : Zyphora UI.                   ║
+-- ║  LIBRARY  : Zyphora UI                   ║
 -- ║  VERSION  : V3.0                         ║
 -- ║  STATUS   : Private                      ║
 -- ║  OWNER    : Zyphora                      ║
@@ -1084,7 +1084,25 @@ local function MinimizeWindow()
         end
     end
     ToggleBtn.MouseButton1Click:Connect(ToggleHideWindow)
-
+    
+    local MinBtn = New("TextButton", {
+        Name = "MinBtn",
+        Size = UDim2.new(0,26,0,26),
+        Position = UDim2.new(1,-62,0.5,-13),
+        BackgroundColor3 = T.Surface,
+        BackgroundTransparency = 0.5,
+        Text = "−",
+        TextColor3 = T.TextDim,
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = TopBar,
+    })
+    Corner(MinBtn, 6)
+    MinBtn.MouseEnter:Connect(function() TFast(MinBtn, { BackgroundTransparency = 0 }) end)
+    MinBtn.MouseLeave:Connect(function() TFast(MinBtn, { BackgroundTransparency = 0.5 }) end)
+    MinBtn.MouseButton1Click:Connect(MinimizeWindow)
+   
 
     -- ── Sidebar ──
     local SidebarBg = New("Frame", {
@@ -1276,7 +1294,7 @@ task.defer(function()
         while ScreenGui and ScreenGui.Parent do
             self:Notify(
                 "Script by Rexz",
-                "Zyphora Hub — Terima kasih sudah pakai! 🕊️",
+                "Zyphora Hub — Terima kasih sudah pakai! 🕊️ Rexz",
                 "success",
                 4
             )
