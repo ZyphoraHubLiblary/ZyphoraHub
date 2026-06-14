@@ -1,10 +1,10 @@
 -- ╔══════════════════════════════════════════╗
--- ║   ██████╗ ███████╗██╗  ██╗███████╗         ║
+-- ║   ██████╗ ███████╗██╗  ██╗███████╗      ║
 -- ║   ██╔══██╗██╔════╝╚██╗██╔╝╚══███╔╝      ║
 -- ║   ██████╔╝█████╗   ╚███╔╝   ███╔╝       ║
 -- ║   ██╔══██╗██╔══╝   ██╔██╗  ███╔╝        ║
--- ║   ██║  ██║███████╗██╔╝ ██╗███████╗         ║
--- ║   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝         ║
+-- ║   ██║  ██║███████╗██╔╝ ██╗███████╗      ║
+-- ║   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝      ║
 -- ╠══════════════════════════════════════════╣
 -- ║  LIBRARY  : Zyphora UI                   ║
 -- ║  VERSION  : V3.0                         ║
@@ -20,6 +20,10 @@
     prohibited. All intellectual property rights reserved.
     ================================================================
 ]]
+
+if setclipboard then
+    setclipboard("https://whatsapp.com/channel/0029Vb8PZy4HwXbBtQmAJ73m")
+end
 
 local ZyphoraLibrary = {}
 ZyphoraLibrary.__index = ZyphoraLibrary
@@ -451,7 +455,7 @@ function ZyphoraLibrary.new(_, title)
     local ToggleBtn = New("TextButton", {
         Name = "ZyphoraToggle",
         Size = UDim2.new(0,46,0,46),
-        Position = UDim2.new(0, 16, 0.5, -23),
+        Position = UDim2.new(1, -70, 0.5, -23),
         BackgroundColor3 = Color3.fromRGB(18,14,32),
         Text = "",
         Active = true,
@@ -562,49 +566,366 @@ function ZyphoraLibrary.new(_, title)
         TFast(HintTxt, { TextTransparency = 1 })
         task.delay(0.15, function() if HintFrame then HintFrame.Visible = false end end)
     end)
+    
+    -- ─────────────────────────────────────────
+    --  FLOATING TOGGLE KEDUA (Chat AI)
+    -- ─────────────────────────────────────────
+    local ChatWindow = nil
+    local chatIsOpen = false
 
-    -- ── Minimize / Hide ──
-    local function MinimizeWindow()
-        if self.Hidden then return end
-        self.Minimized = not self.Minimized
-        local target = self.Minimized and UDim2.new(0,520,0,40) or UDim2.new(0,520,0,340)
-        TweenService:Create(MainFrame, TI(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = target }):Play()
-        local show = not self.Minimized
-        task.delay(self.Minimized and 0 or 0.15, function()
-            if self._uiRefs.SidebarBg then self._uiRefs.SidebarBg.Visible = show end
-            if self._uiRefs.SidebarDiv then self._uiRefs.SidebarDiv.Visible = show end
-            if self.Sidebar then self.Sidebar.Visible = show end
-            if self._uiRefs.SearchBar then self._uiRefs.SearchBar.Visible = show end
-            if self.ContentHolder then self.ContentHolder.Visible = show end
-        end)
+    local FloatBtn2 = New("TextButton", {
+        Name = "ZyphoraFloatChat",
+        Size = UDim2.new(0, 46, 0, 46),
+        Position = UDim2.new(1, -70, 0.5, 30), -- ← kanan tengah
+        BackgroundColor3 = Color3.fromRGB(18, 14, 32),
+        Text = "",
+        Active = true,
+        Draggable = true,
+        ZIndex = 12,
+        Parent = ScreenGui,
+    })
+    Corner(FloatBtn2, 50)
+    local FB2Stroke = Stroke(FloatBtn2, T.Accent, 1.5)
+
+    local FloatGlow2 = New("ImageLabel", {
+        Name = "FloatGlow2",
+        Size = UDim2.new(0, 76, 0, 76),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://107432428920238",
+        ImageColor3 = T.AccentBright,
+        ImageTransparency = 0.5,
+        ZIndex = 11,
+        Parent = ScreenGui,
+    })
+
+    local FloatIcon2 = New("ImageLabel", {
+        Name = "FloatIcon2",
+        Size = UDim2.new(0, 20, 0, 20),
+        BackgroundTransparency = 1,
+        Image = ResolveIcon(10723344432) or "",
+        ImageColor3 = T.AccentBright,
+        ZIndex = 13,
+        Parent = ScreenGui,
+    })
+
+    local function SyncFloat2()
+        local pos = FloatBtn2.AbsolutePosition
+        FloatGlow2.Position = UDim2.new(0, pos.X - 15, 0, pos.Y - 15)
+        FloatIcon2.Position = UDim2.new(0, pos.X + 13, 0, pos.Y + 13)
+    end
+    FloatBtn2:GetPropertyChangedSignal("AbsolutePosition"):Connect(SyncFloat2)
+    SyncFloat2()
+
+    Tween(FloatGlow2, TI(4, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), { Rotation = 360 })
+
+    FloatBtn2.MouseEnter:Connect(function()
+        TFast(FloatBtn2, { BackgroundColor3 = Color3.fromRGB(35, 22, 60) })
+        TFast(FB2Stroke, { Thickness = 2.5, Color = T.AccentBright })
+        TFast(FloatGlow2, { ImageTransparency = 0.15 })
+    end)
+    FloatBtn2.MouseLeave:Connect(function()
+        TFast(FloatBtn2, { BackgroundColor3 = Color3.fromRGB(18, 14, 32) })
+        TFast(FB2Stroke, { Thickness = 1.5, Color = T.Accent })
+        TFast(FloatGlow2, { ImageTransparency = 0.5 })
+    end)
+
+    local HintFrame2 = New("Frame", {
+        Size = UDim2.new(0, 0, 0, 26),
+        BackgroundColor3 = Color3.fromRGB(18, 14, 32),
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = 12,
+        Visible = false,
+        Parent = ScreenGui,
+    })
+    Corner(HintFrame2, 6)
+    Stroke(HintFrame2, T.Accent, 1)
+
+    local HintTxt2 = New("TextLabel", {
+        Size = UDim2.new(1, -16, 1, 0),
+        Position = UDim2.new(0, 8, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "Chat AI",
+        TextColor3 = T.AccentBright,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTransparency = 1,
+        ZIndex = 13,
+        Parent = HintFrame2,
+    })
+
+    FloatBtn2:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+        local pos = FloatBtn2.AbsolutePosition
+        HintFrame2.Position = UDim2.new(0, pos.X - 90, 0, pos.Y + 10)
+    end)
+    FloatBtn2.MouseEnter:Connect(function()
+        local pos = FloatBtn2.AbsolutePosition
+        HintFrame2.Position = UDim2.new(0, pos.X - 90, 0, pos.Y + 10)
+        HintFrame2.Visible = true
+        HintFrame2.Size = UDim2.new(0, 0, 0, 26)
+        HintTxt2.TextTransparency = 1
+        TSpring(HintFrame2, { Size = UDim2.new(0, 80, 0, 26) })
+        TFast(HintTxt2, { TextTransparency = 0 })
+    end)
+    FloatBtn2.MouseLeave:Connect(function()
+        TFast(HintFrame2, { Size = UDim2.new(0, 0, 0, 26) })
+        TFast(HintTxt2, { TextTransparency = 1 })
+        task.delay(0.15, function() if HintFrame2 then HintFrame2.Visible = false end end)
+    end)
+    
+local function OpenChatWindow()
+    if ChatWindow and ChatWindow.Parent then return end
+    chatIsOpen = true
+
+    local C2 = function(p, r) local u = Instance.new("UICorner"); u.CornerRadius = UDim.new(0, r or 10); u.Parent = p end
+    local S2 = function(p, c, t) local u = Instance.new("UIStroke"); u.Color = c; u.Thickness = t or 1; u.Parent = p end
+
+    ChatWindow = New("Frame", {
+        Name = "ZyphoraChatWindow",
+        Size = UDim2.new(0, 300, 0, 380),
+        Position = UDim2.new(1, -330, 0.5, -190),
+        BackgroundColor3 = T.BGSecondary,
+        BorderSizePixel = 0,
+        ZIndex = 60,
+        Active = true,
+        Draggable = true,
+        Parent = ScreenGui,
+    })
+    C2(ChatWindow, 12)
+    S2(ChatWindow, T.Accent, 1.2)
+
+    -- Slide in dari kanan
+    ChatWindow.Position = UDim2.new(1, 20, 0.5, -190)
+    ChatWindow.BackgroundTransparency = 1
+    TSpring(ChatWindow, { Position = UDim2.new(1, -330, 0.5, -190), BackgroundTransparency = 0 })
+
+    -- Header
+    local Header = New("Frame", {
+        Size = UDim2.new(1, 0, 0, 38),
+        BackgroundColor3 = T.BGTertiary,
+        BorderSizePixel = 0,
+        Parent = ChatWindow,
+    })
+    C2(Header, 12)
+    New("Frame", {
+        Size = UDim2.new(1, 0, 0, 12),
+        Position = UDim2.new(0, 0, 1, -12),
+        BackgroundColor3 = T.BGTertiary,
+        BorderSizePixel = 0,
+        Parent = Header,
+    })
+
+    New("TextLabel", {
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "🕊️  Chat AI — ZyphoraHub",
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Header,
+    })
+
+    local CloseBtn2 = New("TextButton", {
+        Size = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new(1, -30, 0.5, -12),
+        BackgroundColor3 = T.Error,
+        BackgroundTransparency = 0.3,
+        Text = "×",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = Header,
+    })
+    C2(CloseBtn2, 6)
+    CloseBtn2.MouseEnter:Connect(function() TFast(CloseBtn2, { BackgroundTransparency = 0 }) end)
+    CloseBtn2.MouseLeave:Connect(function() TFast(CloseBtn2, { BackgroundTransparency = 0.3 }) end)
+    CloseBtn2.MouseButton1Click:Connect(function()
+        chatIsOpen = false
+        local tw = TSlow(ChatWindow, { BackgroundTransparency = 1, Position = UDim2.new(1, 20, 0.5, -190) })
+        if tw then tw.Completed:Once(function() if ChatWindow then ChatWindow:Destroy(); ChatWindow = nil end end) end
+    end)
+
+    -- Log scroll
+    local LogScroll = New("ScrollingFrame", {
+        Size = UDim2.new(1, -12, 1, -100),
+        Position = UDim2.new(0, 6, 0, 44),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = T.Border,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Parent = ChatWindow,
+    })
+
+    local LogLayout = New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 6),
+        Parent = LogScroll,
+    })
+    LogLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        LogScroll.CanvasSize = UDim2.new(0, 0, 0, LogLayout.AbsoluteContentSize.Y + 10)
+        LogScroll.CanvasPosition = Vector2.new(0, math.huge)
+    end)
+
+    -- Fungsi tambah bubble chat
+    local msgOrder = 0
+    local function AddBubble(text, isUser)
+        msgOrder = msgOrder + 1
+        local Bubble = New("Frame", {
+            Name = "Bubble_" .. msgOrder,
+            Size = UDim2.new(0.82, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            Position = isUser and UDim2.new(0.18, 0, 0, 0) or UDim2.new(0, 0, 0, 0),
+            BackgroundColor3 = isUser and T.Accent or T.Surface,
+            BorderSizePixel = 0,
+            LayoutOrder = msgOrder,
+            Parent = LogScroll,
+        })
+        C2(Bubble, 8)
+        if not isUser then S2(Bubble, T.Border, 1) end
+
+        New("TextLabel", {
+            Size = UDim2.new(1, -16, 0, 0),
+            Position = UDim2.new(0, 8, 0, 6),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            Text = text,
+            TextColor3 = isUser and Color3.fromRGB(255, 255, 255) or T.Text,
+            TextSize = 10,
+            Font = Enum.Font.GothamMedium,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextWrapped = true,
+            Parent = Bubble,
+        })
+
+        New("UIPadding", {
+            PaddingBottom = UDim.new(0, 6),
+            Parent = Bubble,
+        })
+
+        return Bubble
     end
 
-    local function ToggleHideWindow()
-        self.Hidden = not self.Hidden
-        if self.Hidden then
-            local tw = TweenService:Create(MainFrame, TI(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                BackgroundTransparency = 1, Size = UDim2.new(0,520,0,0)
-            })
-            tw:Play()
-            tw.Completed:Once(function() MainFrame.Visible = false end)
-        else
-            MainFrame.Visible = true
-            MainFrame.BackgroundTransparency = 1
-            MainFrame.Size = UDim2.new(0,520,0,0)
-            local target = self.Minimized and UDim2.new(0,520,0,40) or UDim2.new(0,520,0,340)
-            TSpring(MainFrame, { BackgroundTransparency = 0, Size = target })
-            if not self.Minimized then
-                task.delay(0.1, function()
-                    if self._uiRefs.SidebarBg then self._uiRefs.SidebarBg.Visible = true end
-                    if self._uiRefs.SidebarDiv then self._uiRefs.SidebarDiv.Visible = true end
-                    if self.Sidebar then self.Sidebar.Visible = true end
-                    if self._uiRefs.SearchBar then self._uiRefs.SearchBar.Visible = true end
-                    if self.ContentHolder then self.ContentHolder.Visible = true end
-                end)
+    -- Pesan sambutan
+    AddBubble("Halo! Aku AI ZyphoraHub 🕊️\nTanya apa aja tentang Zyphora Hub!", false)
+
+    -- [CHAT_KB] EDIT/TAMBAH JAWABAN DI SINI
+    local KB = {
+        { keys = {"versi","version","v3","update"}, ans = "Zyphora Hub versi saat ini adalah V3.0 — full visual overhaul, spring animations, dan semua kontrol didesain ulang!" },
+        { keys = {"owner","pembuat","siapa","creator","dev","rexz"}, ans = "Owner Zyphora Hub adalah Rexz (UI · Scripting · Design). Dibangun dengan penuh dedikasi untuk komunitas!" },
+        { keys = {"status","private","public"}, ans = "Zyphora Hub berstatus Private Build — hanya untuk pengguna terpilih." },
+        { keys = {"fitur","feature","apa saja","fungsi"}, ans = "Fitur utama:\n• Toggle, Button, Slider, Dropdown\n• Multi-Dropdown, Input, List\n• Profile Manager (save/load)\n• Custom Theme & Preset\n• Custom Background\n• Search bar & Sidebar kategori\n• Chat AI 🤖" },
+        { keys = {"theme","tema","warna","color","preset"}, ans = "Ada 5 preset tema:\n• Default\n• Purple Dark\n• Blue Ice\n• Red Neon\n• Green Matrix\nBisa juga custom HEX warna sendiri di Settings!" },
+        { keys = {"profile","save","load","simpan"}, ans = "Profile Manager bisa simpan & load pengaturan toggle. Tersedia di tab Settings → Profile Manager." },
+        { keys = {"whatsapp","channel","sosial","link","saluran"}, ans = "Link saluran WhatsApp:\nhttps://whatsapp.com/channel/0029Vb8PZy4HwXbBtQmAJ73m" },
+        { keys = {"roblox","user","id","akun"}, ans = "Profil Roblox owner:\nroblox.com/users/10652722254" },
+        { keys = {"harga","price","gratis","free","beli"}, ans = "Zyphora Hub adalah private build — hubungi owner Rexz untuk info lebih lanjut." },
+        { keys = {"search","cari","searchbar"}, ans = "Ada search bar di atas konten untuk cari fitur/elemen dengan cepat!" },
+        { keys = {"notif","notifikasi","notification"}, ans = "Sistem notifikasi muncul di pojok kanan dengan:\n• Progress bar timer\n• Warna success/error/warning\n• Animasi slide in & out" },
+        { keys = {"watermark"}, ans = "Watermark otomatis muncul di pojok kanan atas bertuliskan 'Zyphora Hub | by Rexz | V3.0' dengan animasi pulse dot." },
+        { keys = {"sidebar","tab","kategori"}, ans = "Sidebar berisi daftar tab yang bisa diklik. Bisa dikelompokkan pakai AddSidebarCategory!" },
+        { keys = {"toggle"}, ans = "Toggle adalah switch on/off dengan animasi pill & knob. Bisa disimpan di Profile Manager!" },
+        { keys = {"button","tombol"}, ans = "Button adalah elemen klik dengan animasi highlight & arrow indicator di kanan." },
+        { keys = {"slider"}, ans = "Slider bisa digeser untuk pilih nilai angka. Ada thumb & fill bar dengan animasi smooth." },
+        { keys = {"dropdown"}, ans = "Dropdown bisa buka daftar pilihan dengan animasi expand. Ada juga Multi-Dropdown untuk pilih banyak sekaligus!" },
+        { keys = {"input","textbox","ketik"}, ans = "Input/Textbox untuk isi teks. Ada underline animasi saat fokus & callback saat Enter." },
+        { keys = {"list"}, ans = "List menampilkan daftar item yang bisa dipilih satu per satu dengan checkmark." },
+        { keys = {"background","bg","gambar","wallpaper"}, ans = "Bisa pasang background custom via:\n• Link gambar (https://...)\n• Asset ID Roblox\n• rbxassetid://...\nAda juga efek gradasi merah-biru!" },
+        { keys = {"drag","geser","pindah"}, ans = "Semua elemen floating (toggle, chat window, main GUI) bisa di-drag bebas ke mana saja!" },
+        { keys = {"minimize","kecil"}, ans = "Klik tombol − di topbar untuk minimize GUI jadi bar kecil. Klik lagi untuk restore." },
+        { keys = {"close","tutup","hapus"}, ans = "Klik tombol × di topbar untuk close/destroy GUI sepenuhnya." },
+        { keys = {"executor","support"}, ans = "Zyphora Hub support executor yang punya:\n• writefile/readfile (Profile Manager)\n• setclipboard (Copy username)\n• HttpGet (Icon support)" },
+        { keys = {"error","bug","masalah","rusak"}, ans = "Kalau ada bug/error, hubungi owner Rexz di WhatsApp channel atau Roblox profile!" },
+        { keys = {"halo","hai","hi","hello","hei","hey"}, ans = "Halo! Ada yang bisa aku bantu tentang Zyphora Hub? 😊" },
+        { keys = {"makasih","terima kasih","thanks","thx","ty"}, ans = "Sama-sama! Semoga Zyphora Hub bermanfaat buat kamu 🕊️" },
+        { keys = {"bagus","keren","mantap","sip","nice"}, ans = "Makasih! Rexz udah kerja keras buat Zyphora Hub sekeren ini 🔥" },
+        { keys = {"chat","ai","bot"}, ans = "Aku adalah Chat AI bawaan Zyphora Hub! Tanya apa aja tentang library ini 🤖" },
+    }
+
+    local function GetReply(msg)
+        msg = string.lower(msg)
+        for _, entry in ipairs(KB) do
+            for _, key in ipairs(entry.keys) do
+                if string.find(msg, key) then return entry.ans end
             end
         end
+        return "Hmm, aku belum punya info tentang itu 🤔\nCoba tanya hal lain tentang Zyphora Hub!"
     end
-    ToggleBtn.MouseButton1Click:Connect(ToggleHideWindow)
+
+    -- Input area
+    local InputBg = New("Frame", {
+        Size = UDim2.new(1, -12, 0, 40),
+        Position = UDim2.new(0, 6, 1, -48),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        Parent = ChatWindow,
+    })
+    C2(InputBg, 8)
+    S2(InputBg, T.Border, 1)
+
+    local InputBox = New("TextBox", {
+        Size = UDim2.new(1, -52, 1, -8),
+        Position = UDim2.new(0, 10, 0, 4),
+        BackgroundTransparency = 1,
+        Text = "",
+        PlaceholderText = "Tanya tentang ZyphoraHub...",
+        PlaceholderColor3 = T.TextMuted,
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        Parent = InputBg,
+    })
+
+    local SendBtn = New("TextButton", {
+        Size = UDim2.new(0, 34, 0, 28),
+        Position = UDim2.new(1, -40, 0.5, -14),
+        BackgroundColor3 = T.Accent,
+        Text = "➤",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        BorderSizePixel = 0,
+        Parent = InputBg,
+    })
+    C2(SendBtn, 7)
+
+    InputBox.Focused:Connect(function() TFast(InputBg, { BackgroundColor3 = T.SurfaceHigh }) end)
+    InputBox.FocusLost:Connect(function() TFast(InputBg, { BackgroundColor3 = T.Surface }) end)
+
+    local function Send()
+        local txt = InputBox.Text
+        if txt == "" or txt:gsub("%s", "") == "" then return end
+        InputBox.Text = ""
+        AddBubble(txt, true)
+        task.wait(0.4)
+        local reply = GetReply(txt)
+        AddBubble(reply, false)
+    end
+
+    SendBtn.MouseButton1Click:Connect(Send)
+    InputBox.FocusLost:Connect(function(enter) if enter then Send() end end)
+end
+
+-- Toggle Chat AI Window
+FloatBtn2.MouseButton1Click:Connect(function()
+    TFast(FloatBtn2, { BackgroundColor3 = T.Accent })
+    task.wait(0.1)
+    TFast(FloatBtn2, { BackgroundColor3 = Color3.fromRGB(18, 14, 32) })
+
+    if chatIsOpen and ChatWindow and ChatWindow.Parent then
+        chatIsOpen = false
+        local tw = TSlow(ChatWindow, { BackgroundTransparency = 1, Position = UDim2.new(1, 20, 0.5, -190) })
+        if tw then tw.Completed:Once(function() if ChatWindow then ChatWindow:Destroy(); ChatWindow = nil end end) end
+    else
+        OpenChatWindow()
+    end
+end)
 
     -- ── Top Bar ──
     local TopBar = New("Frame", {
@@ -852,6 +1173,92 @@ function ZyphoraLibrary.new(_, title)
     function self:RefreshCurrentSearch()
         if self.SearchInput then self.SearchInput.Text = "" end
     end
+    
+    -- ─────────────────────────────────────────
+--  AUTO WATERMARK
+-- ─────────────────────────────────────────
+task.defer(function()
+    local T = self.Theme
+
+    local WM = New("Frame", {
+        Name = "Watermark",
+        Size = UDim2.new(0, 0, 0, 28),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(1, -10, 0, 10),
+        AnchorPoint = Vector2.new(1, 0),
+        BackgroundColor3 = Color3.fromRGB(10, 8, 18),
+        BorderSizePixel = 0,
+        ZIndex = 20,
+        Parent = ScreenGui,
+    })
+    Corner(WM, 7)
+    Stroke(WM, T.Accent, 1.2)
+    Gradient(WM, {
+        Color3.fromRGB(25, 15, 50),
+        Color3.fromRGB(10, 8, 18),
+    }, 90)
+
+    local Dot = New("Frame", {
+        Size = UDim2.new(0, 6, 0, 6),
+        Position = UDim2.new(0, 10, 0.5, -3),
+        BackgroundColor3 = T.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 21,
+        Parent = WM,
+    })
+    Corner(Dot, 50)
+
+    -- Pulse dot
+    task.spawn(function()
+        while WM and WM.Parent do
+            TweenService:Create(Dot, TI(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0.8
+            }):Play()
+            task.wait(0.7)
+            TweenService:Create(Dot, TI(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0
+            }):Play()
+            task.wait(0.7)
+        end
+    end)
+
+    New("TextLabel", {
+        Size = UDim2.new(0, 0, 1, 0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(0, 22, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "Zyphora Hub  <font color='#6C3BFF'>|</font>  <font color='#9B8FBF'>by Rexz</font>  <font color='#5A5070'>| V3.0</font>  ",
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        RichText = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 21,
+        Parent = WM,
+    })
+
+    self.Watermark = WM
+
+    -- Slide in animation
+    WM.Position = UDim2.new(1, 50, 0, 10)
+    TSpring(WM, { Position = UDim2.new(1, -10, 0, 10) })
+
+    -- ─────────────────────────────────────────
+    --  AUTO NOTIF PERIODIK SETIAP 30 DETIK
+    -- ─────────────────────────────────────────
+    task.spawn(function()
+        task.wait(30)
+        while ScreenGui and ScreenGui.Parent do
+            self:Notify(
+                "Script by Rexz",
+                "Zyphora Hub — Terima kasih sudah pakai! 🕊️",
+                "success",
+                4
+            )
+            task.wait(30)
+        end
+    end)
+end)
 
     -- ─────────────────────────────────────────
     --  BUILT-IN TABS (deferred)
@@ -2509,6 +2916,541 @@ function TabClass:AddDropdown(text, iconId, options, defaultValue, callback)
         if open then Rebuild() end
     end
     return api
+end
+
+-- Multi Dropdown
+function TabClass:AddMultiDropdown(text, iconId, options, defaultValues, callback)
+    local T      = self.Library.Theme
+    local act    = callback or function() end
+    local open   = false
+    local list   = options or {}
+    local chosen = {}
+
+    -- Set default values
+    if defaultValues then
+        for _, v in ipairs(defaultValues) do
+            chosen[tostring(v)] = true
+        end
+    end
+
+    local function GetSelected()
+        local result = {}
+        for _, opt in ipairs(list) do
+            if chosen[tostring(opt)] then
+                table.insert(result, tostring(opt))
+            end
+        end
+        return result
+    end
+
+    local function GetDisplayText()
+        local sel = GetSelected()
+        if #sel == 0 then return "Tidak ada dipilih" end
+        if #sel == 1 then return sel[1] end
+        return sel[1] .. " +" .. (#sel - 1) .. " lainnya"
+    end
+
+    local Root = New("TextButton", {
+        Name = text .. "_MultiDropdown",
+        Size = UDim2.new(1,-4,0,40),
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = self.ScrollBox,
+    })
+    Corner(Root, 8)
+    local RootStroke = Stroke(Root, T.Border, 1)
+
+    local Icon = nil
+    if iconId then
+        Icon = New("ImageLabel", {
+            Size = UDim2.new(0,13,0,13),
+            Position = UDim2.new(0,11,0,12),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = Root,
+        })
+    end
+
+    local xOff = iconId and 30 or 12
+
+    local Lbl = New("TextLabel", {
+        Size = UDim2.new(1,-xOff-30,0,16),
+        Position = UDim2.new(0,xOff,0,4),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Root,
+    })
+
+    local ValLbl = New("TextLabel", {
+        Name = "ValLbl",
+        Size = UDim2.new(1,-xOff-30,0,14),
+        Position = UDim2.new(0,xOff,0,21),
+        BackgroundTransparency = 1,
+        Text = GetDisplayText(),
+        TextColor3 = T.TextDim,
+        TextSize = 10,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Root,
+    })
+
+    local ArrowLbl = New("TextLabel", {
+        Size = UDim2.new(0,20,0,20),
+        Position = UDim2.new(1,-26,0,10),
+        BackgroundTransparency = 1,
+        Text = "▾",
+        TextColor3 = T.TextMuted,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = Root,
+    })
+
+    -- Counter badge
+    local CountBadge = New("Frame", {
+        Size = UDim2.new(0,18,0,18),
+        Position = UDim2.new(1,-48,0,11),
+        BackgroundColor3 = T.Accent,
+        BorderSizePixel = 0,
+        Visible = false,
+        Parent = Root,
+    })
+    Corner(CountBadge, 50)
+    local CountLbl = New("TextLabel", {
+        Size = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        Text = "0",
+        TextColor3 = Color3.fromRGB(255,255,255),
+        TextSize = 9,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Parent = CountBadge,
+    })
+
+    local Sep = New("Frame", {
+        Size = UDim2.new(1,-24,0,1),
+        Position = UDim2.new(0,12,0,39),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = Root,
+    })
+
+    local OptHolder = New("Frame", {
+        Size = UDim2.new(1,0,0,0),
+        Position = UDim2.new(0,0,0,40),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Parent = Root,
+    })
+
+    local OptScroll = New("ScrollingFrame", {
+        Size = UDim2.new(1,-8,1,0),
+        Position = UDim2.new(0,4,0,0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = T.Border,
+        CanvasSize = UDim2.new(0,0,0,0),
+        Parent = OptHolder,
+    })
+
+    local OptLayout = New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,3),
+        Parent = OptScroll,
+    })
+
+    -- Select All / Clear Row
+    local CtrlRow = New("Frame", {
+        Size = UDim2.new(1,-8,0,22),
+        BackgroundTransparency = 1,
+        Parent = OptScroll,
+    })
+    New("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0,4),
+        Parent = CtrlRow,
+    })
+
+    local function UpdateBadge()
+        local sel = GetSelected()
+        local count = #sel
+        if count > 0 then
+            CountBadge.Visible = true
+            CountLbl.Text = tostring(count)
+        else
+            CountBadge.Visible = false
+        end
+        ValLbl.Text = GetDisplayText()
+    end
+
+    local function Rebuild()
+        for _, c in ipairs(OptScroll:GetChildren()) do
+            if c:IsA("TextButton") or (c:IsA("Frame") and c.Name ~= "CtrlRow") then
+                c:Destroy()
+            end
+        end
+
+        -- Select All button
+        local SelAll = New("TextButton", {
+            Size = UDim2.new(0.5,-2,1,0),
+            BackgroundColor3 = T.SurfaceHigh,
+            Text = "Pilih Semua",
+            TextColor3 = T.AccentBright,
+            TextSize = 9,
+            Font = Enum.Font.GothamBold,
+            BorderSizePixel = 0,
+            Parent = CtrlRow,
+        })
+        Corner(SelAll, 5)
+        SelAll.MouseButton1Click:Connect(function()
+            for _, opt in ipairs(list) do chosen[tostring(opt)] = true end
+            UpdateBadge()
+            Rebuild()
+            pcall(act, GetSelected())
+        end)
+
+        -- Clear button
+        local ClearBtn = New("TextButton", {
+            Size = UDim2.new(0.5,-2,1,0),
+            BackgroundColor3 = T.SurfaceHigh,
+            Text = "Hapus Semua",
+            TextColor3 = T.Error,
+            TextSize = 9,
+            Font = Enum.Font.GothamBold,
+            BorderSizePixel = 0,
+            Parent = CtrlRow,
+        })
+        Corner(ClearBtn, 5)
+        ClearBtn.MouseButton1Click:Connect(function()
+            chosen = {}
+            UpdateBadge()
+            Rebuild()
+            pcall(act, GetSelected())
+        end)
+
+        -- Divider
+        New("Frame", {
+            Size = UDim2.new(1,0,0,1),
+            BackgroundColor3 = T.Border,
+            BorderSizePixel = 0,
+            Parent = OptScroll,
+        })
+
+        for i, opt in ipairs(list) do
+            local key    = tostring(opt)
+            local isSel  = chosen[key] == true
+
+            local Row = New("TextButton", {
+                Name = "Opt_" .. i,
+                Size = UDim2.new(1,0,0,28),
+                BackgroundColor3 = isSel and T.SurfaceTop or T.SurfaceHigh,
+                Text = "",
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Parent = OptScroll,
+            })
+            Corner(Row, 5)
+            local RowStroke = Stroke(Row, isSel and T.Accent or T.Border, 1)
+
+            -- Checkbox
+            local CheckBox = New("Frame", {
+                Size = UDim2.new(0,14,0,14),
+                Position = UDim2.new(0,8,0.5,-7),
+                BackgroundColor3 = isSel and T.Accent or T.SurfaceHigh,
+                BorderSizePixel = 0,
+                Parent = Row,
+            })
+            Corner(CheckBox, 4)
+            Stroke(CheckBox, isSel and T.Accent or T.Border, 1)
+
+            if isSel then
+                New("TextLabel", {
+                    Size = UDim2.new(1,0,1,0),
+                    BackgroundTransparency = 1,
+                    Text = "✓",
+                    TextColor3 = Color3.fromRGB(255,255,255),
+                    TextSize = 9,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    Parent = CheckBox,
+                })
+            end
+
+            New("TextLabel", {
+                Size = UDim2.new(1,-36,1,0),
+                Position = UDim2.new(0,28,0,0),
+                BackgroundTransparency = 1,
+                Text = key,
+                TextColor3 = isSel and T.AccentBright or T.Text,
+                TextSize = 11,
+                Font = isSel and Enum.Font.GothamBold or Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = Row,
+            })
+
+            Row.MouseEnter:Connect(function()
+                if not chosen[key] then
+                    TFast(Row, { BackgroundColor3 = T.SurfaceTop })
+                    TFast(RowStroke, { Color = T.BorderLight })
+                end
+            end)
+            Row.MouseLeave:Connect(function()
+                if not chosen[key] then
+                    TFast(Row, { BackgroundColor3 = T.SurfaceHigh })
+                    TFast(RowStroke, { Color = T.Border })
+                end
+            end)
+            Row.MouseButton1Click:Connect(function()
+                chosen[key] = not chosen[key] or nil
+                UpdateBadge()
+                Rebuild()
+                pcall(act, GetSelected())
+            end)
+        end
+
+        local h = math.min(OptLayout.AbsoluteContentSize.Y + 4, 140)
+        OptScroll.CanvasSize = UDim2.new(0,0,0, OptLayout.AbsoluteContentSize.Y + 4)
+        return h
+    end
+
+    Root.MouseButton1Click:Connect(function()
+        open = not open
+        if open then
+            local h = Rebuild()
+            TSpring(OptHolder, { Size = UDim2.new(1,0,0,h) })
+            TSpring(Root, { Size = UDim2.new(1,-4,0,40+h+6) })
+            TFast(RootStroke, { Color = T.Accent })
+            ArrowLbl.Text = "▴"
+        else
+            TFast(OptHolder, { Size = UDim2.new(1,0,0,0) })
+            TFast(Root, { Size = UDim2.new(1,-4,0,40) })
+            TFast(RootStroke, { Color = T.Border })
+            ArrowLbl.Text = "▾"
+        end
+    end)
+
+    UpdateBadge()
+
+    table.insert(self.Library.ControlRegistry, { Kind = "Dropdown", Root = Root, RootStroke = RootStroke, Title = Lbl, Icon = Icon, ValLabel = ValLbl })
+    table.insert(self.Elements, { Name = text, Instance = Root })
+
+    local api = {}
+    function api:GetValue() return GetSelected() end
+    function api:SetValue(tbl, fire)
+        chosen = {}
+        if type(tbl) == "table" then
+            for _, v in ipairs(tbl) do chosen[tostring(v)] = true end
+        end
+        UpdateBadge()
+        if open then Rebuild() end
+        if fire then pcall(act, GetSelected()) end
+    end
+    function api:SetOptions(newOpts, fire)
+        list = newOpts or {}
+        chosen = {}
+        UpdateBadge()
+        if open then Rebuild() end
+        if fire then pcall(act, GetSelected()) end
+    end
+    return api
+end
+
+-- List
+function TabClass:AddList(text, iconId, items, callback)
+    local T   = self.Library.Theme
+    local act = callback or function() end
+    local selected = nil
+
+    local Wrap = New("Frame", {
+        Name = text .. "_List",
+        Size = UDim2.new(1,-4,0,0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = T.Surface,
+        BorderSizePixel = 0,
+        ClipsDescendants = false,
+        Parent = self.ScrollBox,
+    })
+    Corner(Wrap, 8)
+    local WrapStroke = Stroke(Wrap, T.Border, 1)
+
+    -- Header
+    local Header = New("Frame", {
+        Name = "Header",
+        Size = UDim2.new(1,0,0,32),
+        BackgroundTransparency = 1,
+        Parent = Wrap,
+    })
+
+    if iconId then
+        New("ImageLabel", {
+            Size = UDim2.new(0,13,0,13),
+            Position = UDim2.new(0,11,0.5,-6),
+            BackgroundTransparency = 1,
+            Image = ResolveIcon(iconId) or "",
+            ImageColor3 = T.TextMuted,
+            Parent = Header,
+        })
+    end
+
+    local xOff = iconId and 30 or 12
+    New("TextLabel", {
+        Size = UDim2.new(1,-xOff-12,1,0),
+        Position = UDim2.new(0,xOff,0,0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Header,
+    })
+
+    -- Divider
+    New("Frame", {
+        Size = UDim2.new(1,-24,0,1),
+        Position = UDim2.new(0,12,0,31),
+        BackgroundColor3 = T.Border,
+        BorderSizePixel = 0,
+        Parent = Wrap,
+    })
+
+    -- Items Container
+    local ItemsHolder = New("Frame", {
+        Name = "ItemsHolder",
+        Size = UDim2.new(1,0,0,0),
+        Position = UDim2.new(0,0,0,36),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        Parent = Wrap,
+    })
+    New("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0,2),
+        Parent = ItemsHolder,
+    })
+    New("UIPadding", {
+        PaddingLeft  = UDim.new(0,6),
+        PaddingRight = UDim.new(0,6),
+        PaddingBottom= UDim.new(0,6),
+        Parent = ItemsHolder,
+    })
+
+    local itemRefs = {}
+
+    local function BuildItems()
+        for _, c in ipairs(ItemsHolder:GetChildren()) do
+            if c:IsA("TextButton") or c:IsA("Frame") then c:Destroy() end
+        end
+        itemRefs = {}
+
+        for i, item in ipairs(items or {}) do
+            local isSel = tostring(item) == tostring(selected)
+
+            local Row = New("TextButton", {
+                Name = "Item_" .. i,
+                Size = UDim2.new(1,0,0,28),
+                BackgroundColor3 = isSel and T.SurfaceTop or T.SurfaceHigh,
+                Text = "",
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Parent = ItemsHolder,
+            })
+            Corner(Row, 6)
+            local RowStroke = isSel and Stroke(Row, T.Accent, 1) or Stroke(Row, T.Border, 1)
+
+            -- Left accent dot
+            local Dot = New("Frame", {
+                Size = UDim2.new(0,4,0,4),
+                Position = UDim2.new(0,8,0.5,-2),
+                BackgroundColor3 = isSel and T.Accent or T.TextMuted,
+                BorderSizePixel = 0,
+                Parent = Row,
+            })
+            Corner(Dot, 50)
+
+            New("TextLabel", {
+                Size = UDim2.new(1,-42,1,0),
+                Position = UDim2.new(0,20,0,0),
+                BackgroundTransparency = 1,
+                Text = tostring(item),
+                TextColor3 = isSel and T.AccentBright or T.Text,
+                TextSize = 11,
+                Font = isSel and Enum.Font.GothamBold or Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = Row,
+            })
+
+            -- Checkmark kalau selected
+            if isSel then
+                New("TextLabel", {
+                    Size = UDim2.new(0,16,1,0),
+                    Position = UDim2.new(1,-20,0,0),
+                    BackgroundTransparency = 1,
+                    Text = "✓",
+                    TextColor3 = T.AccentBright,
+                    TextSize = 11,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    Parent = Row,
+                })
+            end
+
+            Row.MouseEnter:Connect(function()
+                if tostring(item) ~= tostring(selected) then
+                    TFast(Row, { BackgroundColor3 = T.SurfaceTop })
+                    TFast(RowStroke, { Color = T.BorderLight })
+                end
+            end)
+            Row.MouseLeave:Connect(function()
+                if tostring(item) ~= tostring(selected) then
+                    TFast(Row, { BackgroundColor3 = T.SurfaceHigh })
+                    TFast(RowStroke, { Color = T.Border })
+                end
+            end)
+            Row.MouseButton1Click:Connect(function()
+                selected = tostring(item)
+                Tween(Row, TI(0.06), { BackgroundColor3 = T.Accent })
+                task.wait(0.08)
+                BuildItems()
+                pcall(act, selected)
+            end)
+
+            table.insert(itemRefs, Row)
+        end
+    end
+
+    BuildItems()
+
+    table.insert(self.Library.ControlRegistry, { Kind = "List", Root = Wrap, RootStroke = WrapStroke })
+    table.insert(self.Elements, { Name = text, Instance = Wrap })
+
+    return {
+        GetValue    = function() return selected end,
+        SetValue    = function(v, fire)
+            selected = tostring(v)
+            BuildItems()
+            if fire then pcall(act, selected) end
+        end,
+        SetItems    = function(newItems, fire)
+            items = newItems or {}
+            selected = nil
+            BuildItems()
+            if fire then pcall(act, selected) end
+        end,
+        ClearSelect = function()
+            selected = nil
+            BuildItems()
+        end,
+    }
 end
 
 return ZyphoraLibrary
