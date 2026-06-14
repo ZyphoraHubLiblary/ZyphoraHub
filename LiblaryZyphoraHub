@@ -61,7 +61,7 @@ local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
 
-local url = "https://gist.githubusercontent.com/RexzCihuy/a7696406c2768696228d552dc46aad3c/raw/a907d23d33203a0b0080eae09a09c94a4653019c/Whislist"
+local url = "https://gist.githubusercontent.com/RexzCihuy/a7696406c2768696228d552dc46aad3c/raw/489bb44dceb172dfb2023ac65999223d786ce43f/Whislist"
 
 local req = (syn and syn.request)
 or (http and http.request)
