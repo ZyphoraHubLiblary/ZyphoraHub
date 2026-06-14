@@ -1042,24 +1042,49 @@ end)
     CloseBtn.MouseLeave:Connect(function() TFast(CloseBtn, { BackgroundColor3 = T.Surface, BackgroundTransparency = 0.3 }) end)
     CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
-    -- Minimize button
-    local MinBtn = New("TextButton", {
-        Name = "MinBtn",
-        Size = UDim2.new(0,26,0,26),
-        Position = UDim2.new(1,-62,0.5,-13),
-        BackgroundColor3 = T.Surface,
-        BackgroundTransparency = 0.5,
-        Text = "−",
-        TextColor3 = T.TextDim,
-        TextSize = 14,
-        Font = Enum.Font.GothamBold,
-        BorderSizePixel = 0,
-        Parent = TopBar,
-    })
-    Corner(MinBtn, 6)
-    MinBtn.MouseEnter:Connect(function() TFast(MinBtn, { BackgroundTransparency = 0 }) end)
-    MinBtn.MouseLeave:Connect(function() TFast(MinBtn, { BackgroundTransparency = 0.5 }) end)
-    MinBtn.MouseButton1Click:Connect(MinimizeWindow)
+     -- minimize
+local function MinimizeWindow()
+        if self.Hidden then return end
+        self.Minimized = not self.Minimized
+        local target = self.Minimized and UDim2.new(0,520,0,40) or UDim2.new(0,520,0,340)
+        TweenService:Create(MainFrame, TI(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = target }):Play()
+        local show = not self.Minimized
+        task.delay(self.Minimized and 0 or 0.15, function()
+            if self._uiRefs.SidebarBg then self._uiRefs.SidebarBg.Visible = show end
+            if self._uiRefs.SidebarDiv then self._uiRefs.SidebarDiv.Visible = show end
+            if self.Sidebar then self.Sidebar.Visible = show end
+            if self._uiRefs.SearchBar then self._uiRefs.SearchBar.Visible = show end
+            if self.ContentHolder then self.ContentHolder.Visible = show end
+        end)
+    end
+
+    local function ToggleHideWindow()
+        self.Hidden = not self.Hidden
+        if self.Hidden then
+            local tw = TweenService:Create(MainFrame, TI(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                BackgroundTransparency = 1, Size = UDim2.new(0,520,0,0)
+            })
+            tw:Play()
+            tw.Completed:Once(function() MainFrame.Visible = false end)
+        else
+            MainFrame.Visible = true
+            MainFrame.BackgroundTransparency = 1
+            MainFrame.Size = UDim2.new(0,520,0,0)
+            local target = self.Minimized and UDim2.new(0,520,0,40) or UDim2.new(0,520,0,340)
+            TSpring(MainFrame, { BackgroundTransparency = 0, Size = target })
+            if not self.Minimized then
+                task.delay(0.1, function()
+                    if self._uiRefs.SidebarBg then self._uiRefs.SidebarBg.Visible = true end
+                    if self._uiRefs.SidebarDiv then self._uiRefs.SidebarDiv.Visible = true end
+                    if self.Sidebar then self.Sidebar.Visible = true end
+                    if self._uiRefs.SearchBar then self._uiRefs.SearchBar.Visible = true end
+                    if self.ContentHolder then self.ContentHolder.Visible = true end
+                end)
+            end
+        end
+    end
+    ToggleBtn.MouseButton1Click:Connect(ToggleHideWindow)
+
 
     -- ── Sidebar ──
     local SidebarBg = New("Frame", {
