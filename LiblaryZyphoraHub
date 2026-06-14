@@ -57,6 +57,41 @@ if Blacklist[LocalPlayer.Name] then
 end
 -- =================================================================
 
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+
+local url = "https://gist.githubusercontent.com/RexzCihuy/a7696406c2768696228d552dc46aad3c/raw/a907d23d33203a0b0080eae09a09c94a4653019c/Whislist"
+
+local req = (syn and syn.request)
+or (http and http.request)
+or http_request
+or request
+
+local response = req({
+    Url = url,
+    Method = "GET"
+})
+
+local data = response.Body
+
+local allowed = false
+
+for user in string.gmatch(data, "[^\r\n]+") do
+
+    if user:lower() == player.Name:lower() then
+        allowed = true
+        break
+    end
+
+end
+
+if allowed then
+    print("Whitelist Accepted 🕊️")
+else
+    player:Kick("Not Whitelisted")
+end
+
 -- ─────────────────────────────────────────
 --  ICON SUPPORT
 -- ─────────────────────────────────────────
