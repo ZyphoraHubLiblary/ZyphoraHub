@@ -856,6 +856,92 @@ function ZyphoraLibrary.new(_, title)
     function self:RefreshCurrentSearch()
         if self.SearchInput then self.SearchInput.Text = "" end
     end
+    
+    -- ─────────────────────────────────────────
+--  AUTO WATERMARK
+-- ─────────────────────────────────────────
+task.defer(function()
+    local T = self.Theme
+
+    local WM = New("Frame", {
+        Name = "Watermark",
+        Size = UDim2.new(0, 0, 0, 28),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(1, -10, 0, 10),
+        AnchorPoint = Vector2.new(1, 0),
+        BackgroundColor3 = Color3.fromRGB(10, 8, 18),
+        BorderSizePixel = 0,
+        ZIndex = 20,
+        Parent = ScreenGui,
+    })
+    Corner(WM, 7)
+    Stroke(WM, T.Accent, 1.2)
+    Gradient(WM, {
+        Color3.fromRGB(25, 15, 50),
+        Color3.fromRGB(10, 8, 18),
+    }, 90)
+
+    local Dot = New("Frame", {
+        Size = UDim2.new(0, 6, 0, 6),
+        Position = UDim2.new(0, 10, 0.5, -3),
+        BackgroundColor3 = T.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 21,
+        Parent = WM,
+    })
+    Corner(Dot, 50)
+
+    -- Pulse dot
+    task.spawn(function()
+        while WM and WM.Parent do
+            TweenService:Create(Dot, TI(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0.8
+            }):Play()
+            task.wait(0.7)
+            TweenService:Create(Dot, TI(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                BackgroundTransparency = 0
+            }):Play()
+            task.wait(0.7)
+        end
+    end)
+
+    New("TextLabel", {
+        Size = UDim2.new(0, 0, 1, 0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(0, 22, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "Zyphora Hub  <font color='#6C3BFF'>|</font>  <font color='#9B8FBF'>by Rexz</font>  <font color='#5A5070'>| V3.0</font>  ",
+        TextColor3 = T.Text,
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        RichText = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 21,
+        Parent = WM,
+    })
+
+    self.Watermark = WM
+
+    -- Slide in animation
+    WM.Position = UDim2.new(1, 50, 0, 10)
+    TSpring(WM, { Position = UDim2.new(1, -10, 0, 10) })
+
+    -- ─────────────────────────────────────────
+    --  AUTO NOTIF PERIODIK SETIAP 30 DETIK
+    -- ─────────────────────────────────────────
+    task.spawn(function()
+        task.wait(30)
+        while ScreenGui and ScreenGui.Parent do
+            self:Notify(
+                "Script by Rexz",
+                "Zyphora Hub — Terima kasih sudah pakai! 🕊️",
+                "success",
+                4
+            )
+            task.wait(30)
+        end
+    end)
+end)
 
     -- ─────────────────────────────────────────
     --  BUILT-IN TABS (deferred)
