@@ -1,16 +1,53 @@
--- ╔══════════════════════════════════════════╗
--- ║   ██████╗ ███████╗██╗  ██╗███████╗      ║
--- ║   ██╔══██╗██╔════╝╚██╗██╔╝╚══███╔╝      ║
--- ║   ██████╔╝█████╗   ╚███╔╝   ███╔╝       ║
--- ║   ██╔══██╗██╔══╝   ██╔██╗  ███╔╝        ║
--- ║   ██║  ██║███████╗██╔╝ ██╗███████╗      ║
--- ║   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝      ║
--- ╠══════════════════════════════════════════╣
--- ║  LIBRARY  : Zyphora UI                   ║
--- ║  VERSION  : V3.0                         ║
--- ║  STATUS   : Private                      ║
--- ║  OWNER    : Zyphora                      ║
--- ╚══════════════════════════════════════════╝
+-- ╔══════════════════════════════════════════════════════════════════════╗
+-- ║                                                                      ║
+-- ║ ███████╗██╗   ██╗██████╗ ██╗  ██╗ ██████╗ ██████╗  █████╗           ║
+-- ║ ╚══███╔╝╚██╗ ██╔╝██╔══██╗██║  ██║██╔═══██╗██╔══██╗██╔══██╗          ║
+-- ║   ███╔╝  ╚████╔╝ ██████╔╝███████║██║   ██║██████╔╝███████║          ║
+-- ║  ███╔╝    ╚██╔╝  ██╔═══╝ ██╔══██║██║   ██║██╔══██╗██╔══██║          ║
+-- ║ ███████╗   ██║   ██║     ██║  ██║╚██████╔╝██║  ██║██║  ██║          ║
+-- ║ ╚══════╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝          ║
+-- ║                                                                      ║
+-- ╠══════════════════════════════════════════════════════════════════════╣
+-- ║                                                                      ║
+-- ║                        ZYPHORA UI LIBRARY                            ║
+-- ║                                                                      ║
+-- ╠══════════════════════════════════════════════════════════════════════╣
+-- ║                                                                      ║
+-- ║  VERSION      : V3.0 FUTURISTIC EDITION                              ║
+-- ║  STATUS       : PRIVATE BUILD                                        ║
+-- ║  OWNER        : ZYPHORA                                              ║
+-- ║  DEVELOPER    : ZYPHORA TEAM                                         ║
+-- ║  STYLE        : RED x BLUE MODERN UI                                 ║
+-- ║  TYPE         : CUSTOM ROBLOX LUA LIBRARY                            ║
+-- ║  SUPPORT      : MOBILE / PC / EXECUTOR                               ║
+-- ║                                                                      ║
+-- ╠══════════════════════════════════════════════════════════════════════╣
+-- ║                                                                      ║
+-- ║  FEATURES :                                                          ║
+-- ║                                                                      ║
+-- ║   • Modern Window System                                             ║
+-- ║   • Smooth Tween Animation                                           ║
+-- ║   • Red Blue Gradient Theme                                          ║
+-- ║   • Custom Notification                                              ║
+-- ║   • Toggle / Button / Slider                                         ║
+-- ║   • Dropdown / Paragraph / Label                                     ║
+-- ║   • Draggable UI                                                     ║
+-- ║   • Mobile Friendly                                                  ║
+-- ║   • Optimized Performance                                            ║
+-- ║                                                                      ║
+-- ╠══════════════════════════════════════════════════════════════════════╣
+-- ║                                                                      ║
+-- ║  SECURITY :                                                          ║
+-- ║                                                                      ║
+-- ║   • Private Access                                                   ║
+-- ║   • Custom Protected Build                                           ║
+-- ║   • Internal Zyphora System                                          ║
+-- ║                                                                      ║
+-- ╠══════════════════════════════════════════════════════════════════════╣
+-- ║                                                                      ║
+-- ║                POWERED BY ZYPHORA BY REXZ                            ║
+-- ║                                                                      ║
+-- ╚══════════════════════════════════════════════════════════════════════╝
 
 --[[
     ================================================================
@@ -576,7 +613,7 @@ local chatIsOpen = false
 local FloatBtn2 = New("TextButton", {
     Name = "ZyphoraFloatChat",
     Size = UDim2.new(0, 46, 0, 46),
-    Position = UDim2.new(0, 16, 0.5, 30), -- ← tengah kiri, di bawah toggle utama
+    Position = UDim2.new(1, -70, 0.5, 30), -- ← tengah kiri, di bawah toggle utama
     BackgroundColor3 = Color3.fromRGB(18, 14, 32),
     Text = "",
     Active = true,
@@ -707,7 +744,7 @@ local function OpenChatWindow()
 ChatWindow = New("Frame", {
     Name = "ZyphoraChatWindow",
     Size = UDim2.new(0, 300, 0, 380),
-    Position = UDim2.new(0, 70, 0.5, -190), -- ← posisi normal
+    Position = UDim2.new(1, -330, 0.5, -190), -- ← posisi normal
     BackgroundColor3 = T.BGSecondary,
     BorderSizePixel = 0,
     ZIndex = 60,
@@ -719,9 +756,9 @@ C2(ChatWindow, 12)
 S2(ChatWindow, T.Accent, 1.2)
 
 -- Slide in dari kiri
-ChatWindow.Position = UDim2.new(0, -320, 0.5, -190)
+ChatWindow.Position = UDim2.new(1, 20, 0.5, -190)
 ChatWindow.BackgroundTransparency = 1
-TSpring(ChatWindow, { Position = UDim2.new(0, 70, 0.5, -190), BackgroundTransparency = 0 })
+TSpring(ChatWindow, { Position = UDim2.new(1, -330, 0.5, -190), BackgroundTransparency = 0 })
 
     -- Header
     local Header = New("Frame", {
@@ -768,7 +805,7 @@ TSpring(ChatWindow, { Position = UDim2.new(0, 70, 0.5, -190), BackgroundTranspar
     CloseBtn2.MouseLeave:Connect(function() TFast(CloseBtn2, { BackgroundTransparency = 0.3 }) end)
     CloseBtn2.MouseButton1Click:Connect(function()
         chatIsOpen = false
-        local tw = TSlow(ChatWindow, { BackgroundTransparency = 1, Position = UDim2.new(0, -320, 0.5, -190) })
+        local tw = TSlow(ChatWindow, { BackgroundTransparency = 1, Position = UDim2.new(1, 20, 0.5, -190) })
         if tw then tw.Completed:Once(function() if ChatWindow then ChatWindow:Destroy(); ChatWindow = nil end end) end
     end)
 
@@ -893,7 +930,7 @@ TSpring(ChatWindow, { Position = UDim2.new(0, 70, 0.5, -190), BackgroundTranspar
         Size = UDim2.new(0, 34, 0, 28),
         Position = UDim2.new(1, -40, 0.5, -14),
         BackgroundColor3 = T.Accent,
-        Text = "➤",
+        Text = ">",
         TextColor3 = Color3.fromRGB(255, 255, 255),
         TextSize = 13,
         Font = Enum.Font.GothamBold,
@@ -927,7 +964,7 @@ FloatBtn2.MouseButton1Click:Connect(function()
 
     if chatIsOpen and ChatWindow and ChatWindow.Parent then
         chatIsOpen = false
-        local tw = TSlow(ChatWindow, { BackgroundTransparency = 1, Position = UDim2.new(0, -320, 0.5, -190) })
+        local tw = TSlow(ChatWindow, { BackgroundTransparency = 1, Position = UDim2.new(1, 20, 0.5, -190) })
         if tw then tw.Completed:Once(function() if ChatWindow then ChatWindow:Destroy(); ChatWindow = nil end end) end
     else
         OpenChatWindow()
